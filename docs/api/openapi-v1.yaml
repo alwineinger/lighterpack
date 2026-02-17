@@ -1,0 +1,53 @@
+openapi: 3.0.3
+info:
+  title: LighterPack API
+  version: 1.0.0
+paths:
+  /api/v1/session:
+    get:
+      summary: Get authenticated session payload
+      responses:
+        '200':
+          description: Session payload
+  /api/v1/library:
+    put:
+      summary: Save an entire library document
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Save success
+        '409':
+          description: Stale sync token
+  /api/v1/packs:
+    get:
+      summary: List packs for current user
+      responses:
+        '200':
+          description: Pack list
+  /api/v1/packs/{packId}/share:
+    post:
+      summary: Ensure pack has a share external ID
+      parameters:
+        - in: path
+          name: packId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created share id
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true

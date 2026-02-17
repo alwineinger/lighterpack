@@ -1,6 +1,7 @@
 import Vuex from 'vuex';
 import Vue from 'vue';
 import debounce from 'lodash/debounce';
+import { loadSession, saveLibrary as saveLibraryApi } from '../api/mobile-api';
 
 const weightUtils = require('../utils/weight.js');
 const dataTypes = require('../dataTypes.js');
@@ -269,16 +270,10 @@ const store = new Vuex.Store({
             context.commit('setLoggedIn', false);
         },
         loadRemote(context) {
-            return fetchJson('/signin', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin',
-            })
+            return loadSession()
                 .then((response) => {
                     context.commit('setSyncToken', response.syncToken);
-                    context.commit('loadLibraryData', response.library);
+                    context.commit('loadLibraryData', JSON.stringify(response.library));
                     context.commit('setSaveType', 'remote');
                     context.commit('setLoggedIn', response.username);
                 })
@@ -328,14 +323,7 @@ const store = new Vuex.Store({
                     store.commit('setIsSaving', true);
                     store.commit('setLastSaveData', saveData);
 
-                    return fetchJson('/saveLibrary/', {
-                        method: 'POST',
-                        body: JSON.stringify({ syncToken: state.syncToken, username: state.loggedIn, data: saveData }),
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin',
-                    })
+                    return saveLibraryApi({ syncToken: state.syncToken, library: JSON.parse(saveData) })
                         .then((response) => {
                             store.commit('setSyncToken', response.syncToken);
                             store.commit('setIsSaving', false);

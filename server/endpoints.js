@@ -234,6 +234,11 @@ router.post('/forgotPassword', (req, res) => {
                         text: message,
                     };
 
+                    if (!mailgun) {
+                        logWithRequest(req, { message: 'Mailgun not configured for forgot password' });
+                        return res.status(503).json({ message: 'Email is temporarily unavailable.' });
+                    }
+
                     logWithRequest(req, { message: 'Attempting to send new password', email });
                     mailgun.messages().send(mailOptions, (error, response) => {
                         if (error) {
@@ -280,6 +285,11 @@ router.post('/forgotUsername', (req, res) => {
             subject: 'Your LighterPack username',
             text: message,
         };
+
+        if (!mailgun) {
+            logWithRequest(req, { message: 'Mailgun not configured for forgot username' });
+            return res.status(503).json({ message: 'Email is temporarily unavailable.' });
+        }
 
         logWithRequest(req, { message: 'Attempting to send username', email, username });
         mailgun.messages().send(mailOptions, (error, response) => {
@@ -371,8 +381,7 @@ function deleteAccount(req, res, user) {
 }
 
 router.post('/imageUpload', (req, res) => {
-    // authenticateUser(req, res, imageUpload);
-    imageUpload(req, res, {});
+    authenticateUser(req, res, imageUpload);
 });
 
 function imageUpload(req, res, user) {

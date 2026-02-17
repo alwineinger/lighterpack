@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LighterPack Domain Schemas",
+  "type": "object",
+  "definitions": {
+    "User": {
+      "type": "object",
+      "required": ["username"],
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "syncToken": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "Pack": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "externalId": { "type": ["string", "null"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Category": {
+      "type": "object",
+      "required": ["id", "name", "categoryItems"],
+      "properties": {
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "categoryItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["itemId", "qty"],
+            "properties": {
+              "itemId": { "type": "integer" },
+              "qty": { "type": "number" },
+              "worn": { "type": "boolean" },
+              "consumable": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "Item": {
+      "type": "object",
+      "required": ["id", "name", "weight", "authorUnit"],
+      "properties": {
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "weight": { "type": "number" },
+        "authorUnit": { "type": "string", "enum": ["oz", "lb", "g", "kg"] },
+        "price": { "type": "number" }
+      }
+    }
+  }
+}

@@ -15,7 +15,7 @@
                 </div>
                 <div class="lpField">
                     <label for="embedUrl">Embed your list</label>
-                    <textarea id="embedUrl" v-select-on-focus>&lt;script src="{{ this.baseUrl }}/e/{{ this.externalId }}"&gt;&lt;/script&gt;&lt;div id="{{ this.externalId }}"&gt;&lt;/div&gt;</textarea>
+                    <textarea id="embedUrl" v-select-on-focus readonly>{{ embedSnippet }}</textarea>
                 </div>
                 <a id="csvUrl" :href="csvUrl" target="_blank" class="lpHref"><i class="lpSprite lpSpriteDownload" />Export to CSV</a>
             </div>
@@ -25,6 +25,7 @@
 
 <script>
 import PopoverHover from './popover-hover.vue';
+import { createShareExternalId } from '../api/mobile-api';
 
 export default {
     name: 'Share',
@@ -60,17 +61,17 @@ export default {
             }
             return '';
         },
+        embedSnippet() {
+            if (!this.externalId) {
+                return '';
+            }
+            return `<scr` + `ipt src="${this.baseUrl}/e/${this.externalId}"></scr` + `ipt><div id="${this.externalId}"></div>`;
+        },
     },
     methods: {
         focusShare(evt) {
             if (!this.list.externalId) {
-                return fetchJson('/externalId', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'same-origin',
-                })
+                return createShareExternalId(this.list.id)
                     .then((response) => {
                         this.$store.commit('setExternalId', { externalId: response.externalId, list: this.list });
                         setTimeout(() => {

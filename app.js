@@ -58,20 +58,21 @@ app.use(express.static(`${__dirname}/public/`, { maxAge: oneDay }));
 const endpoints = require('./server/endpoints.js');
 const moderationEndpoints = require('./server/moderation-endpoints.js');
 const views = require('./server/views.js');
+const apiV1 = require('./server/api-v1.js');
 
 app.use('/', endpoints);
 app.use('/', moderationEndpoints);
 app.use('/', views);
+app.use('/', apiV1);
 
 logger.info("Starting up Lighterpack...");
 
+let webpackConfig;
 if (config.get('environment') === 'production') {
     webpackConfig = require('./webpack.config');
 } else {
     webpackConfig = require('./webpack.development.config');
 }
-
-webpackCompiler = webpack(webpackConfig);
 
 // Default port is 3000; we can have multiple bindings
 config.get('bindings').map(
