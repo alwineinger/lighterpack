@@ -7,6 +7,7 @@ RUN npm ci
 
 COPY . .
 
+ENV NODE_OPTIONS=--openssl-legacy-provider
 RUN npm run build
 
 ENV NODE_ENV=docker
