@@ -112,6 +112,9 @@
         margin-left: 0;
         padding-left: $spacingLarge;
         width: 100%;
+        background: #555;
+        height: 100vh;
+        overflow-y: auto;
     }
 
     #main.lpIsMobile.lpMobileModeList #sidebar {
@@ -123,6 +126,11 @@
     #main.lpIsMobile.lpMobileModeGear #sidebar {
         opacity: 1;
         pointer-events: auto;
+    }
+
+    #main.lpIsMobile.lpMobileModeLists .lpList,
+    #main.lpIsMobile.lpMobileModeGear .lpList {
+        display: none;
     }
 }
 </style>
