@@ -101,6 +101,59 @@ $welcomeVerticalSpacing: 80px;
     text-align: center;
 }
 
+@media (max-width: 980px) {
+    #lpWelcomeContainer {
+        padding-top: 60px;
+    }
+
+    #lpWelcome {
+        h1 {
+            font-size: 24px;
+            margin-bottom: 40px;
+
+            strong {
+                font-size: 30px;
+            }
+        }
+    }
+
+    .lpWelcomeContent {
+        flex-direction: column;
+    }
+
+    .lpWelcomeRegisterContainer,
+    .lpWelcomeSigninContainer {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+
+    .lpWelcomeRegisterContainer {
+        margin-right: 0;
+        margin-bottom: $spacingLarge;
+        padding: $spacingMedium;
+        flex-direction: column;
+    }
+
+    .lpWelcomeRegister {
+        margin-right: 0;
+        margin-bottom: $spacingMedium;
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 600px) {
+    #lpWelcomeContainer {
+        padding-top: 70px;
+    }
+
+    .lpContainer {
+        padding: 0 $spacingSmall;
+    }
+
+    #lpLaunchBanner {
+        position: static;
+    }
+}
 </style>
 
 <template>
