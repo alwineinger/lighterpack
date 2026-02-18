@@ -81,28 +81,6 @@
         padding: 12px;
     }
 
-    .lpMobileTabs {
-        display: flex;
-        gap: 8px;
-        margin: 0 0 12px;
-    }
-
-    .lpMobileTabButton {
-        background: #f3f3f3;
-        border: 1px solid #ccc;
-        border-radius: 18px;
-        color: #333;
-        cursor: pointer;
-        font-size: 13px;
-        padding: 8px 12px;
-    }
-
-    .lpMobileTabButton.isActive {
-        background: $blue1;
-        border-color: $blue1;
-        color: #fff;
-    }
-
     #main #sidebar {
         display: none;
     }
@@ -113,19 +91,9 @@
     <div v-if="isLoaded" id="main" :class="{lpHasSidebar: library.showSidebar}">
         <sidebar />
         <div class="lpList lpTransition">
-            <div v-if="isMobile" class="lpMobileTabs">
-                <button class="lpMobileTabButton isActive" type="button">
-                    List
-                </button>
-                <router-link class="lpMobileTabButton" to="/lists">
-                    Lists
-                </router-link>
-                <router-link class="lpMobileTabButton" to="/gear">
-                    Gear
-                </router-link>
-            </div>
+            <mobileTabs v-if="showCompactTabs" active="list" />
             <div id="header" class="clearfix">
-                <span v-if="!isMobile" class="headerItem">
+                <span v-if="!showCompactTabs" class="headerItem">
                     <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
                 </span>
                 <input id="lpListName" :value="list.name" type="text" class="lpListName lpSilent headerItem" value="New List" placeholder="List Name" autocomplete="off" name="lastpass-disable-search" @input="updateListName">
@@ -186,6 +154,8 @@ import itemLink from '../components/item-link.vue';
 import importCSV from '../components/import-csv.vue';
 import copyList from '../components/copy-list.vue';
 import speedbump from '../components/speedbump.vue';
+import mobileTabs from '../components/mobile-tabs.vue';
+import { getResponsiveState, subscribeResponsiveState } from '../utils/responsive';
 
 export default {
     name: 'Dashboard',
@@ -206,12 +176,14 @@ export default {
         itemViewImage,
         speedbump,
         globalAlerts,
+        mobileTabs,
     },
     mixins: [],
     data() {
         return {
             isLoaded: false,
-            isMobile: false,
+            responsive: getResponsiveState(),
+            unsubscribeResponsive: null,
         };
     },
     computed: {
@@ -224,27 +196,29 @@ export default {
         isSignedIn() {
             return this.$store.state.loggedIn;
         },
+        showCompactTabs() {
+            return this.responsive.isCompactViewport || this.responsive.isCoarsePointer;
+        },
     },
     beforeMount() {
         if (!this.$store.state.library) {
-            router.push('/welcome');
+            this.$router.push('/welcome');
         } else {
             this.isLoaded = true;
         }
     },
     mounted() {
-        this.updateIsMobile();
-        window.addEventListener('resize', this.updateIsMobile);
+        this.unsubscribeResponsive = subscribeResponsiveState();
     },
     beforeDestroy() {
-        window.removeEventListener('resize', this.updateIsMobile);
+        if (this.unsubscribeResponsive) {
+            this.unsubscribeResponsive();
+            this.unsubscribeResponsive = null;
+        }
     },
     methods: {
         toggleSidebar() {
             this.$store.commit('toggleSidebar');
-        },
-        updateIsMobile() {
-            this.isMobile = window.matchMedia('(max-width: 900px)').matches;
         },
         updateListName(evt) {
             this.$store.commit('updateListName', { id: this.list.id, name: evt.target.value });

@@ -42,7 +42,7 @@ export default {
         },
         signout() {
             this.$store.commit('signout');
-            router.push('/signin');
+            this.$router.push('/signin');
         },
     },
 };

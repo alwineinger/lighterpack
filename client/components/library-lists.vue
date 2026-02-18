@@ -162,7 +162,7 @@ export default {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
             if (this.mobileLists) {
-                router.push('/');
+                this.$router.push('/');
             }
         },
         newList() {

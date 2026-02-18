@@ -3,28 +3,63 @@ import { test, expect } from '@playwright/test';
 import { testRoot } from './utils';
 import { registerUser } from './auth-utils';
 
+async function registerAndOpenList(page, viewport: { width: number; height: number }) {
+  await page.setViewportSize(viewport);
+  await page.goto(testRoot);
+
+  const now = Date.now();
+  const username = `mobile${viewport.width}${now}`;
+  const email = `mobile+${viewport.width}${now}@lighterpack.com`;
+  const password = 'testtest';
+
+  await registerUser(page, username, password, email);
+}
+
+async function getHorizontalOverflow(page) {
+  return page.evaluate(() => {
+    const root = document.documentElement;
+    return root.scrollWidth - root.clientWidth;
+  });
+}
+
 test.describe('Mobile layout', () => {
-  test('should be editable without horizontal overflow on iPhone-sized viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 393, height: 852 });
-    await page.goto(testRoot);
-
-    const now = Date.now();
-    const username = `mobile${now}`;
-    const email = `mobile+${now}@lighterpack.com`;
-    const password = 'testtest';
-
-    await registerUser(page, username, password, email);
+  test('should be editable without horizontal overflow on iPhone 16 Pro portrait', async ({ page }) => {
+    await registerAndOpenList(page, { width: 393, height: 852 });
 
     await page.getByPlaceholder('Name').first().fill('Tent');
     await page.getByPlaceholder('Description').first().fill('2P');
     await page.getByLabel('Item weight').first().fill('32');
     await page.getByLabel('Item quantity').first().fill('1');
 
-    const overflow = await page.evaluate(() => {
-      const root = document.documentElement;
-      return root.scrollWidth - root.clientWidth;
-    });
+    const overflow = await getHorizontalOverflow(page);
+    expect(overflow).toBeLessThan(24);
+  });
 
+  test('should remain editable and compact at 375px width', async ({ page }) => {
+    await registerAndOpenList(page, { width: 375, height: 812 });
+
+    await page.getByPlaceholder('Name').first().fill('Quilt');
+    await page.getByLabel('Item weight').first().fill('20');
+
+    await expect(page.getByText('Add new category')).toBeVisible();
+    const overflow = await getHorizontalOverflow(page);
+    expect(overflow).toBeLessThan(24);
+  });
+
+  test('should support list/lists/gear tabs in compact landscape-like constraints', async ({ page }) => {
+    await registerAndOpenList(page, { width: 852, height: 393 });
+
+    await expect(page.getByRole('link', { name: 'Lists' })).toBeVisible();
+    await page.getByRole('link', { name: 'Lists' }).click();
+    await expect(page.getByRole('heading', { name: 'Lists' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Gear' }).click();
+    await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'List' }).click();
+    await page.getByPlaceholder('List Name').fill('Landscape Test Pack');
+
+    const overflow = await getHorizontalOverflow(page);
     expect(overflow).toBeLessThan(24);
   });
 });

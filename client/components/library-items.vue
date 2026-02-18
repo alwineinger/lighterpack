@@ -59,7 +59,9 @@
 }
 
 .lpLibrarySelect {
+    align-self: start;
     display: inline-flex;
+    grid-area: select;
     margin-right: 6px;
 }
 
@@ -68,12 +70,19 @@
 }
 
 .lpLibraryItem {
+    align-items: center;
     border-top: 1px dotted #999;
+    column-gap: 8px;
+    display: grid;
+    grid-template-areas:
+        "select name weight actions"
+        "select description description actions";
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     list-style: none;
     margin: 0 10px 5px;
-    min-height: 43px;
+    min-height: 54px;
     overflow: hidden;
-    padding: 5px 5px 0 15px;
+    padding: 8px 8px 8px 10px;
     position: relative;
 
     &:first-child {
@@ -92,38 +101,42 @@
     }
 
     .lpName {
-        float: left;
+        grid-area: name;
         margin: 0;
-        max-width: 190px;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .lpWeight {
-        float: right;
+        grid-area: weight;
+        justify-self: end;
+        white-space: nowrap;
         width: auto;
     }
 
     .lpDescription {
-        clear: both;
         color: #ccc;
         display: block;
+        grid-area: description;
         overflow: hidden;
         text-overflow: ellipsis;
-        width: 235px;
+        white-space: nowrap;
     }
 
     .lpHandle {
-        height: 80px;
-        left: 0;
-        position: absolute;
-        top: 5px;
+        align-self: stretch;
+        grid-area: actions;
+        height: auto;
+        justify-self: end;
+        position: static;
     }
 
     .lpRemove {
-        bottom: 0;
-        position: absolute;
-        right: 14px;
+        align-self: center;
+        grid-area: actions;
+        justify-self: end;
+        position: static;
     }
 
     #library.lpSearching & {
@@ -138,27 +151,36 @@
         background: #666;
         color: #fff;
         padding: 10px;
-        width: 235px;
+        width: auto;
     }
 }
 
 .lpLibraryItem.isMobileGear {
+    box-sizing: border-box;
+    grid-template-areas:
+        "name weight"
+        "description description"
+        "actions actions";
+    grid-template-columns: minmax(0, 1fr) auto;
     margin: 0 0 10px;
     padding: 10px;
     width: 100%;
-    box-sizing: border-box;
 }
 
 .lpLibraryItem.isMobileGear .lpName,
 .lpLibraryItem.isMobileGear .lpDescription {
-    float: none;
     max-width: none;
+    white-space: normal;
     width: auto;
 }
 
 .lpLibraryItem.isMobileGear .lpWeight {
-    float: none;
     margin-top: 2px;
+}
+
+.lpLibraryItem.isMobileGear .lpRemove,
+.lpLibraryItem.isMobileGear .lpHandle {
+    justify-self: start;
 }
 
 @media (max-width: 900px) {
@@ -171,8 +193,14 @@
     }
 
     .lpLibraryItem {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
         margin: 0 0 8px;
-        padding-left: 10px;
+        padding: 10px;
+
+        .lpDescription {
+            white-space: normal;
+        }
     }
 }
 </style>
@@ -184,7 +212,7 @@
             <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
             <div v-if="!mobileGear" class="lpBulkAddBar">
                 <label class="lpBulkToggle">
-                    <input type="checkbox" v-model="bulkSelectEnabled">
+                    <input v-model="bulkSelectEnabled" type="checkbox">
                     Select multiple
                 </label>
                 <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="selectAllVisible">
@@ -225,12 +253,12 @@
             </div>
         </div>
         <ul id="library">
-            <li v-for="item in filteredItems" class="lpLibraryItem" :class="{isMobileGear: mobileGear}" :data-item-id="item.id">
+            <li v-for="item in filteredItems" :key="item.id" class="lpLibraryItem" :class="{isMobileGear: mobileGear}" :data-item-id="item.id">
                 <label v-if="!mobileGear && bulkSelectEnabled" class="lpLibrarySelect">
                     <input
+                        v-model="selectedItemIds"
                         type="checkbox"
                         :value="item.id"
-                        v-model="selectedItemIds"
                         :disabled="item.inCurrentList"
                     >
                 </label>
@@ -284,7 +312,7 @@ export default {
             let item;
             let filteredItems = [];
             if (!this.searchText) {
-                filteredItems = this.library.items.map(item => Vue.util.extend({}, item));
+                filteredItems = this.library.items.map((item) => Vue.util.extend({}, item));
             } else {
                 const lowerCaseSearchText = this.searchText.toLowerCase();
 
@@ -306,7 +334,7 @@ export default {
             }
 
             if (this.mobileGear) {
-                return filteredItems.filter(listItem => !listItem.inCurrentList);
+                return filteredItems.filter((listItem) => !listItem.inCurrentList);
             }
 
             return filteredItems;
@@ -315,7 +343,7 @@ export default {
             return this.library.getListById(this.library.defaultListId);
         },
         categories() {
-            return this.list.categoryIds.map(id => this.library.getCategoryById(id));
+            return this.list.categoryIds.map((id) => this.library.getCategoryById(id));
         },
     },
     watch: {
@@ -353,8 +381,8 @@ export default {
         },
         selectAllVisible() {
             const itemsToSelect = this.filteredItems
-                .filter(item => !item.inCurrentList)
-                .map(item => item.id);
+                .filter((item) => !item.inCurrentList)
+                .map((item) => item.id);
             this.selectedItemIds = itemsToSelect;
         },
         clearSelection() {
