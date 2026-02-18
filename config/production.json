@@ -1,0 +1,8 @@
+{
+  "environment": "production",
+  "deployUrl": "http://localhost:3000",
+  "publicUrl": "http://localhost:3000",
+  "port": 3000,
+  "bindings": ["0.0.0.0"],
+  "databaseUrl": "mongo/lighterpack"
+}
