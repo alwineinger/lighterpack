@@ -125,7 +125,7 @@
                 </router-link>
             </div>
             <div id="header" class="clearfix">
-                <span class="headerItem">
+                <span v-if="!isMobile" class="headerItem">
                     <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
                 </span>
                 <input id="lpListName" :value="list.name" type="text" class="lpListName lpSilent headerItem" value="New List" placeholder="List Name" autocomplete="off" name="lastpass-disable-search" @input="updateListName">

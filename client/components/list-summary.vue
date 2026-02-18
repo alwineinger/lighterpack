@@ -45,6 +45,21 @@
         width: 100%;
     }
 }
+
+@media (max-width: 900px) and (orientation: landscape) {
+    .lpListSummary {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .lpChartContainer {
+        max-width: 220px;
+    }
+
+    .lpTotalsContainer {
+        flex: 1 1 auto;
+    }
+}
 </style>
 
 <template>
