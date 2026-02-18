@@ -70,26 +70,15 @@ $sidebarPadding: 20px;
     }
 }
 
-@media (max-width: 900px) {
-    #sidebar {
-        box-shadow: none;
-        padding-right: $spacingLarge;
-    }
-
-    #scrollable {
-        height: auto;
-    }
-}
-
 </style>
 
 <template>
     <div id="sidebar">
         <div id="scrollable">
-            <h1 v-if="!isMobile">LighterPack <span>(beta)</span></h1>
+            <h1>LighterPack <span>(beta)</span></h1>
 
-            <libraryLists v-if="showLists" />
-            <libraryItems v-if="showGear" />
+            <libraryLists />
+            <libraryItems />
         </div>
     </div>
 </template>
@@ -100,33 +89,9 @@ import libraryLists from './library-lists.vue';
 
 export default {
     name: 'Sidebar',
-    props: {
-        isMobile: {
-            type: Boolean,
-            default: false,
-        },
-        mobileMode: {
-            type: String,
-            default: 'list',
-        },
-    },
     components: {
         libraryItems,
         libraryLists,
-    },
-    computed: {
-        showLists() {
-            if (!this.isMobile) {
-                return true;
-            }
-            return this.mobileMode === 'lists';
-        },
-        showGear() {
-            if (!this.isMobile) {
-                return true;
-            }
-            return this.mobileMode === 'gear';
-        },
     },
 };
 </script>

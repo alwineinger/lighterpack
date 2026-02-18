@@ -4,6 +4,8 @@ import signin from './views/signin.vue';
 import register from './views/register.vue';
 import forgotPassword from './views/forgot-password.vue';
 import moderation from './views/moderation.vue';
+import mobileLists from './views/mobile-lists.vue';
+import mobileGear from './views/mobile-gear.vue';
 
 export default [
     { path: '/', component: dashboard },
@@ -13,6 +15,8 @@ export default [
     { path: '/signin/forgot-username', component: signin },
     { path: '/register', component: register },
     { path: '/forgot-password', component: forgotPassword },
+    { path: '/lists', component: mobileLists },
+    { path: '/gear', component: mobileGear },
     { path: '/moderation', component: moderation },
     { path: '*', component: dashboard },
 ];

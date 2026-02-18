@@ -65,10 +65,6 @@
     }
 }
 
-.lpMobileTabs {
-    display: none;
-}
-
 @media (max-width: 900px) {
     #header {
         flex-wrap: wrap;
@@ -107,58 +103,26 @@
         color: #fff;
     }
 
-    #main.lpIsMobile #sidebar {
-        left: 0;
-        margin-left: 0;
-        padding-left: $spacingLarge;
-        width: 100%;
-        background: #555;
-        height: 100vh;
-        overflow-y: auto;
-    }
-
-    #main.lpIsMobile.lpMobileModeList #sidebar {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    #main.lpIsMobile.lpMobileModeLists #sidebar,
-    #main.lpIsMobile.lpMobileModeGear #sidebar {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    #main.lpIsMobile.lpMobileModeLists .lpList,
-    #main.lpIsMobile.lpMobileModeGear .lpList {
+    #main #sidebar {
         display: none;
     }
 }
 </style>
 
 <template>
-    <div
-        v-if="isLoaded"
-        id="main"
-        :class="{
-            lpHasSidebar: showSidebar,
-            lpIsMobile: isMobile,
-            lpMobileModeList: mobileMode === 'list',
-            lpMobileModeLists: mobileMode === 'lists',
-            lpMobileModeGear: mobileMode === 'gear',
-        }"
-    >
-        <sidebar :is-mobile="isMobile" :mobile-mode="mobileMode" />
+    <div v-if="isLoaded" id="main" :class="{lpHasSidebar: library.showSidebar}">
+        <sidebar />
         <div class="lpList lpTransition">
-            <div class="lpMobileTabs">
-                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'list'}" @click="setMobileMode('list')">
+            <div v-if="isMobile" class="lpMobileTabs">
+                <button class="lpMobileTabButton isActive" type="button">
                     List
                 </button>
-                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'lists'}" @click="setMobileMode('lists')">
+                <router-link class="lpMobileTabButton" to="/lists">
                     Lists
-                </button>
-                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'gear'}" @click="setMobileMode('gear')">
+                </router-link>
+                <router-link class="lpMobileTabButton" to="/gear">
                     Gear
-                </button>
+                </router-link>
             </div>
             <div id="header" class="clearfix">
                 <span class="headerItem">
@@ -248,7 +212,6 @@ export default {
         return {
             isLoaded: false,
             isMobile: false,
-            mobileMode: 'list',
         };
     },
     computed: {
@@ -260,12 +223,6 @@ export default {
         },
         isSignedIn() {
             return this.$store.state.loggedIn;
-        },
-        showSidebar() {
-            if (this.isMobile) {
-                return this.mobileMode !== 'list';
-            }
-            return this.library.showSidebar;
         },
     },
     beforeMount() {
@@ -284,20 +241,10 @@ export default {
     },
     methods: {
         toggleSidebar() {
-            if (this.isMobile) {
-                this.mobileMode = (this.mobileMode === 'list') ? 'lists' : 'list';
-                return;
-            }
             this.$store.commit('toggleSidebar');
-        },
-        setMobileMode(mode) {
-            this.mobileMode = mode;
         },
         updateIsMobile() {
             this.isMobile = window.matchMedia('(max-width: 900px)').matches;
-            if (!this.isMobile) {
-                this.mobileMode = 'list';
-            }
         },
         updateListName(evt) {
             this.$store.commit('updateListName', { id: this.list.id, name: evt.target.value });
