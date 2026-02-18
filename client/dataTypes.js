@@ -424,23 +424,20 @@ Library.prototype.newList = function () {
 };
 
 Library.prototype.removeList = function (id) {
-    if (Object.size(this.lists) == 1) return;
+    if (this.lists.length === 1) return;
     const list = this.getListById(id);
 
-    for (var i = 0; i < list.categoryIds; i++) {
+    if (!list) return;
+
+    for (let i = 0; i < list.categoryIds.length; i++) {
         this.removeCategory(list.categoryIds[i], true);
     }
 
     this.lists.splice(this.lists.indexOf(list), 1);
     delete this.idMap[id];
 
-    if (this.defaultListId == id) {
-        let newId = -1;
-        for (var i in lists) {
-            newId = i;
-            break;
-        }
-        this.defaultListId = newId;
+    if (this.defaultListId == id && this.lists.length) {
+        this.defaultListId = this.lists[0].id;
     }
 };
 

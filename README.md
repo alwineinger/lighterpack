@@ -15,3 +15,10 @@ How to run Lighterpack
 Future non-feature initiatives
 -----------
 - Migrate to postgres document store from mongo
+
+API & mobile docs
+-----------
+- OpenAPI summary: `docs/api/openapi-v1.yaml`
+- Domain schemas: `docs/api/domain-schemas.json`
+- Mobile checklist: `docs/mobile-ux-checklist.md`
+- Mobile companion notes: `docs/mobile-companion-integration.md`
