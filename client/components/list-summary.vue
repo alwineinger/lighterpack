@@ -1,9 +1,48 @@
 <style lang="scss">
 
+.lpListSummary {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.lpChartContainer {
+    flex: 0 0 260px;
+}
+
+.lpChart {
+    display: block;
+    max-width: 100%;
+}
+
+.lpTotalsContainer {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
 .lpLegend {
     &:hover {
         border-color: #666;
         cursor: pointer;
+    }
+}
+
+@media (max-width: 900px) {
+    .lpListSummary {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .lpChartContainer {
+        flex: 0 0 auto;
+        margin: 0 auto;
+        max-width: 320px;
+        width: 100%;
+    }
+
+    .lpTotalsContainer {
+        width: 100%;
     }
 }
 </style>
@@ -118,6 +157,7 @@ export default {
         return {
             chart: null,
             hoveredCategoryId: null,
+            chartSize: 260,
         };
     },
     computed: {
@@ -139,9 +179,25 @@ export default {
     },
     mounted() {
         this.updateChart();
+        window.addEventListener('resize', this.updateChart);
+    },
+    beforeDestroy() {
+        window.removeEventListener('resize', this.updateChart);
     },
     methods: {
         updateChart(type) {
+            const canvas = this.$el.querySelector('.lpChart');
+            if (canvas) {
+                const maxWidth = 260;
+                const minWidth = 180;
+                const containerWidth = Math.floor(Math.min(maxWidth, Math.max(minWidth, this.$el.clientWidth * 0.9)));
+                if (this.chartSize !== containerWidth) {
+                    this.chartSize = containerWidth;
+                    canvas.width = containerWidth;
+                    canvas.height = containerWidth;
+                    this.chart = null;
+                }
+            }
             const chartData = this.library.renderChart(type);
 
             if (chartData) {
