@@ -79,20 +79,23 @@ export default {
     },
     methods: {
         importCSV(evt) {
+            if (!evt.target.files || !evt.target.files.length) {
+                this.notify('No file selected.');
+                return;
+            }
             const file = evt.target.files[0];
             const name = file.name;
             const size = file.size;
-            const type = file.type;
 
             if (file.name.length < 1) {
                 return;
             }
             if (file.size > 1000000) {
-                alert('File is too big');
+                this.notify('File is too big.');
                 return;
             }
             if (name.substring(name.length - 4).toLowerCase() != '.csv') {
-                alert('Please select a CSV.');
+                this.notify('Please select a CSV.');
                 return;
             }
             const reader = new FileReader();
@@ -141,23 +144,35 @@ export default {
             for (const i in csv) {
                 const row = csv[i];
                 if (row.length < 6) continue;
-                if (row[0].toLowerCase() == 'item name') continue;
-                if (isNaN(parseInt(row[3]))) continue;
-                if (isNaN(parseInt(row[4]))) continue;
-                if (typeof this.fullUnitToUnit[row[5]] === 'undefined') continue;
+                const itemName = String(row[0] || '').trim();
+                const categoryName = String(row[1] || '').trim();
+                const description = String(row[2] || '').trim();
+                const qtyRaw = String(row[3] || '').trim();
+                const weightRaw = String(row[4] || '').trim();
+                const unitRaw = String(row[5] || '').trim().toLowerCase();
+
+                if (!itemName || itemName.toLowerCase() == 'item name') continue;
+                const qty = parseFloat(qtyRaw);
+                const weight = parseFloat(weightRaw);
+                if (Number.isNaN(qty) || Number.isNaN(weight)) continue;
+
+                const normalizedUnit = this.fullUnitToUnit[unitRaw] || unitRaw;
+                if (typeof this.fullUnitToUnit[unitRaw] === 'undefined' && ['oz', 'lb', 'g', 'kg'].indexOf(normalizedUnit) === -1) {
+                    continue;
+                }
 
                 this.importData.data.push({
-                    name: row[0],
-                    category: row[1],
-                    description: row[2],
-                    qty: parseFloat(row[3]),
-                    weight: parseFloat(row[4]),
-                    unit: this.fullUnitToUnit[row[5]],
+                    name: itemName,
+                    category: categoryName || 'Uncategorized',
+                    description,
+                    qty,
+                    weight,
+                    unit: normalizedUnit,
                 });
             }
 
             if (!this.importData.data.length) {
-                alert('Unable to load spreadsheet - please verify the format.');
+                this.notify('Unable to load spreadsheet - please verify the format.');
             } else {
                 this.shown = true;
             }
@@ -165,6 +180,13 @@ export default {
         importList() {
             this.$store.commit('importCSV', this.importData);
             this.shown = false;
+        },
+        notify(message) {
+            if (this.$store && this.$store.state && this.$store.state.globalAlerts) {
+                this.$store.state.globalAlerts.push({ message });
+                return;
+            }
+            alert(message);
         },
 
     },
