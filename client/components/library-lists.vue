@@ -70,6 +70,12 @@
     }
 }
 
+.lpLibraryList.isMobileList {
+    .lpHandle {
+        display: none;
+    }
+}
+
 .listContainerHeader {
     display: flex;
     justify-content: space-between;
@@ -101,7 +107,12 @@
             </PopoverHover>
         </div>
         <ul id="lists">
-            <li v-for="list in library.lists" :key="list.id" class="lpLibraryList" :class="{lpActive: (library.defaultListId == list.id)}">
+            <li
+                v-for="list in library.lists"
+                :key="list.id"
+                class="lpLibraryList"
+                :class="{lpActive: (library.defaultListId == list.id), isMobileList: mobileLists}"
+            >
                 <div class="lpHandle" title="Reorder this item" />
                 <span class="lpLibraryListSwitch lpListName" @click="setDefaultList(list)">
                     {{ list | listName }}
@@ -127,18 +138,32 @@ export default {
             return list.name || 'New list';
         },
     },
-    props: ['list'],
+    props: {
+        list: {
+            type: Object,
+            default: null,
+        },
+        mobileLists: {
+            type: Boolean,
+            default: false,
+        },
+    },
     computed: {
         library() {
             return this.$store.state.library;
         },
     },
     mounted() {
-        this.handleListReorder();
+        if (!this.mobileLists) {
+            this.handleListReorder();
+        }
     },
     methods: {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
+            if (this.mobileLists) {
+                router.push('/');
+            }
         },
         newList() {
             this.$store.commit('newList');
