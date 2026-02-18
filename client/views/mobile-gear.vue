@@ -59,7 +59,7 @@
                 <router-link class="lpMobileTabButton" to="/lists">Lists</router-link>
                 <span class="lpMobileTabButton isActive">Gear</span>
             </div>
-            <libraryItems />
+            <libraryItems :mobile-gear="true" />
         </div>
     </div>
 </template>

@@ -11,6 +11,15 @@
     overflow-y: scroll;
 }
 
+#libraryContainer.lpMobileGearView {
+    display: block;
+}
+
+#libraryContainer.lpMobileGearView #library {
+    max-height: none;
+    overflow-y: visible;
+}
+
 #libraryToolbar {
     display: flex;
     flex-direction: column;
@@ -133,9 +142,31 @@
     }
 }
 
+.lpLibraryItem.isMobileGear {
+    margin: 0 0 10px;
+    padding: 10px;
+    width: 100%;
+}
+
+.lpLibraryItem.isMobileGear .lpName,
+.lpLibraryItem.isMobileGear .lpDescription {
+    float: none;
+    max-width: none;
+    width: auto;
+}
+
+.lpLibraryItem.isMobileGear .lpWeight {
+    float: none;
+    margin-top: 2px;
+}
+
 @media (max-width: 900px) {
     #library {
         max-height: 55vh;
+    }
+
+    #libraryContainer.lpMobileGearView #library {
+        max-height: none;
     }
 
     .lpLibraryItem {
@@ -146,11 +177,11 @@
 </style>
 
 <template>
-    <section id="libraryContainer">
+    <section id="libraryContainer" :class="{lpMobileGearView: mobileGear}">
         <h2>Gear</h2>
         <div id="libraryToolbar">
             <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
-            <div class="lpBulkAddBar">
+            <div v-if="!mobileGear" class="lpBulkAddBar">
                 <label class="lpBulkToggle">
                     <input type="checkbox" v-model="bulkSelectEnabled">
                     Select multiple
@@ -176,10 +207,25 @@
                     Add selected ({{ selectedItemIds.length }})
                 </button>
             </div>
+            <div v-else class="lpBulkAddBar">
+                <select v-model="bulkCategoryId">
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.name || 'New category' }}
+                    </option>
+                </select>
+                <button
+                    class="lpButton lpSmall"
+                    type="button"
+                    :disabled="filteredItems.length === 0"
+                    @click="addAllVisibleToCategory"
+                >
+                    Add all visible ({{ filteredItems.length }})
+                </button>
+            </div>
         </div>
         <ul id="library">
-            <li v-for="item in filteredItems" class="lpLibraryItem" :data-item-id="item.id">
-                <label v-if="bulkSelectEnabled" class="lpLibrarySelect">
+            <li v-for="item in filteredItems" class="lpLibraryItem" :class="{isMobileGear: mobileGear}" :data-item-id="item.id">
+                <label v-if="!mobileGear && bulkSelectEnabled" class="lpLibrarySelect">
                     <input
                         type="checkbox"
                         :value="item.id"
@@ -197,7 +243,7 @@
                     {{ item.description }}
                 </span>
                 <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpSprite lpSpriteRemove" /></a>
-                <div v-if="!item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
+                <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
             </li>
         </ul>
     </section>
@@ -211,7 +257,12 @@ const dragula = require('dragula');
 export default {
     name: 'LibraryItem',
     mixins: [utilsMixin],
-    props: ['item'],
+    props: {
+        mobileGear: {
+            type: Boolean,
+            default: false,
+        },
+    },
     data() {
         return {
             searchText: '',
@@ -244,13 +295,17 @@ export default {
                 }
             }
 
-            const currentListItems = this.library.getItemsInCurrentList();
+            const currentListItems = new Set(this.library.getItemsInCurrentList());
 
             for (i = 0; i < filteredItems.length; i++) {
                 item = filteredItems[i];
-                if (currentListItems.indexOf(item.id) > -1) {
+                if (currentListItems.has(item.id)) {
                     item.inCurrentList = true;
                 }
+            }
+
+            if (this.mobileGear) {
+                return filteredItems.filter(listItem => !listItem.inCurrentList);
             }
 
             return filteredItems;
@@ -265,13 +320,17 @@ export default {
     watch: {
         categories() {
             Vue.nextTick(() => {
-                this.handleItemDrag();
+                if (!this.mobileGear) {
+                    this.handleItemDrag();
+                }
             });
             this.ensureBulkCategory();
         },
     },
     mounted() {
-        this.handleItemDrag();
+        if (!this.mobileGear) {
+            this.handleItemDrag();
+        }
         this.updateIsMobile();
         this.ensureBulkCategory();
         window.addEventListener('resize', this.updateIsMobile);
@@ -282,7 +341,7 @@ export default {
     methods: {
         updateIsMobile() {
             this.isMobile = window.matchMedia('(max-width: 900px)').matches;
-            if (this.isMobile && !this.bulkSelectEnabled) {
+            if (this.isMobile && !this.mobileGear && !this.bulkSelectEnabled) {
                 this.bulkSelectEnabled = true;
             }
         },
@@ -318,6 +377,20 @@ export default {
                 dropIndex += 1;
             });
             this.clearSelection();
+        },
+        addAllVisibleToCategory() {
+            if (!this.filteredItems.length) {
+                return;
+            }
+            const dropCategory = this.library.getCategoryById(this.bulkCategoryId) || this.categories[0];
+            if (!dropCategory) {
+                return;
+            }
+            let dropIndex = dropCategory.categoryItems.length;
+            this.filteredItems.forEach((listItem) => {
+                this.$store.commit('addItemToCategory', { itemId: listItem.id, categoryId: dropCategory.id, dropIndex });
+                dropIndex += 1;
+            });
         },
         handleItemDrag() {
             if (this.drake) {
