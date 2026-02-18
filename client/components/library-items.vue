@@ -11,12 +11,51 @@
     overflow-y: scroll;
 }
 
+#libraryToolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
 #librarySearch {
     background: #666;
     border: 1px solid #888;
     color: #fff;
-    margin-bottom: 15px;
     padding: 3px 6px;
+}
+
+.lpBulkAddBar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.lpBulkAddBar select {
+    background: #666;
+    border: 1px solid #888;
+    color: #fff;
+    padding: 4px 6px;
+}
+
+.lpBulkAddBar .lpButton {
+    padding: 6px 10px;
+}
+
+.lpBulkToggle {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
+.lpLibrarySelect {
+    display: inline-flex;
+    margin-right: 6px;
+}
+
+.lpLibrarySelect input[type="checkbox"] {
+    transform: translateY(2px);
 }
 
 .lpLibraryItem {
@@ -93,14 +132,61 @@
         width: 235px;
     }
 }
+
+@media (max-width: 900px) {
+    #library {
+        max-height: 55vh;
+    }
+
+    .lpLibraryItem {
+        margin: 0 0 8px;
+        padding-left: 10px;
+    }
+}
 </style>
 
 <template>
     <section id="libraryContainer">
         <h2>Gear</h2>
-        <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
+        <div id="libraryToolbar">
+            <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
+            <div class="lpBulkAddBar">
+                <label class="lpBulkToggle">
+                    <input type="checkbox" v-model="bulkSelectEnabled">
+                    Select multiple
+                </label>
+                <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="selectAllVisible">
+                    Select all
+                </button>
+                <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="clearSelection">
+                    Clear
+                </button>
+                <select v-if="bulkSelectEnabled" v-model="bulkCategoryId">
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.name || 'New category' }}
+                    </option>
+                </select>
+                <button
+                    v-if="bulkSelectEnabled"
+                    class="lpButton lpSmall"
+                    type="button"
+                    :disabled="selectedItemIds.length === 0"
+                    @click="addSelectedToCategory"
+                >
+                    Add selected ({{ selectedItemIds.length }})
+                </button>
+            </div>
+        </div>
         <ul id="library">
             <li v-for="item in filteredItems" class="lpLibraryItem" :data-item-id="item.id">
+                <label v-if="bulkSelectEnabled" class="lpLibrarySelect">
+                    <input
+                        type="checkbox"
+                        :value="item.id"
+                        v-model="selectedItemIds"
+                        :disabled="item.inCurrentList"
+                    >
+                </label>
                 <a v-if="item.url" :href="item.url" target="_blank" class="lpName lpHref">{{ item.name }}</a>
                 <span v-if="!item.url" class="lpName">{{ item.name }}</span>
                 <span class="lpWeight">
@@ -131,6 +217,10 @@ export default {
             searchText: '',
             itemDragId: false,
             drake: null,
+            bulkSelectEnabled: false,
+            selectedItemIds: [],
+            bulkCategoryId: null,
+            isMobile: false,
         };
     },
     computed: {
@@ -177,12 +267,58 @@ export default {
             Vue.nextTick(() => {
                 this.handleItemDrag();
             });
+            this.ensureBulkCategory();
         },
     },
     mounted() {
         this.handleItemDrag();
+        this.updateIsMobile();
+        this.ensureBulkCategory();
+        window.addEventListener('resize', this.updateIsMobile);
+    },
+    beforeDestroy() {
+        window.removeEventListener('resize', this.updateIsMobile);
     },
     methods: {
+        updateIsMobile() {
+            this.isMobile = window.matchMedia('(max-width: 900px)').matches;
+            if (this.isMobile && !this.bulkSelectEnabled) {
+                this.bulkSelectEnabled = true;
+            }
+        },
+        ensureBulkCategory() {
+            if (!this.bulkCategoryId && this.categories.length) {
+                this.bulkCategoryId = this.categories[0].id;
+            }
+        },
+        selectAllVisible() {
+            const itemsToSelect = this.filteredItems
+                .filter(item => !item.inCurrentList)
+                .map(item => item.id);
+            this.selectedItemIds = itemsToSelect;
+        },
+        clearSelection() {
+            this.selectedItemIds = [];
+        },
+        addSelectedToCategory() {
+            if (!this.selectedItemIds.length) {
+                return;
+            }
+            const dropCategory = this.library.getCategoryById(this.bulkCategoryId) || this.categories[0];
+            if (!dropCategory) {
+                return;
+            }
+            const currentListItemIds = new Set(this.library.getItemsInCurrentList());
+            let dropIndex = dropCategory.categoryItems.length;
+            this.selectedItemIds.forEach((itemId) => {
+                if (currentListItemIds.has(itemId)) {
+                    return;
+                }
+                this.$store.commit('addItemToCategory', { itemId, categoryId: dropCategory.id, dropIndex });
+                dropIndex += 1;
+            });
+            this.clearSelection();
+        },
         handleItemDrag() {
             if (this.drake) {
                 this.drake.destroy();

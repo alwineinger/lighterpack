@@ -64,12 +64,94 @@
         padding: 0 16px;
     }
 }
+
+.lpMobileTabs {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    #header {
+        flex-wrap: wrap;
+        height: auto;
+        margin: 0 -15px 15px;
+    }
+
+    #lpListName {
+        flex: 1 1 auto;
+        min-width: 180px;
+    }
+
+    .headerItem {
+        padding: 12px;
+    }
+
+    .lpMobileTabs {
+        display: flex;
+        gap: 8px;
+        margin: 0 0 12px;
+    }
+
+    .lpMobileTabButton {
+        background: #f3f3f3;
+        border: 1px solid #ccc;
+        border-radius: 18px;
+        color: #333;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+
+    .lpMobileTabButton.isActive {
+        background: $blue1;
+        border-color: $blue1;
+        color: #fff;
+    }
+
+    #main.lpIsMobile #sidebar {
+        left: 0;
+        margin-left: 0;
+        padding-left: $spacingLarge;
+        width: 100%;
+    }
+
+    #main.lpIsMobile.lpMobileModeList #sidebar {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    #main.lpIsMobile.lpMobileModeLists #sidebar,
+    #main.lpIsMobile.lpMobileModeGear #sidebar {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
 </style>
 
 <template>
-    <div v-if="isLoaded" id="main" :class="{lpHasSidebar: library.showSidebar}">
-        <sidebar />
+    <div
+        v-if="isLoaded"
+        id="main"
+        :class="{
+            lpHasSidebar: showSidebar,
+            lpIsMobile: isMobile,
+            lpMobileModeList: mobileMode === 'list',
+            lpMobileModeLists: mobileMode === 'lists',
+            lpMobileModeGear: mobileMode === 'gear',
+        }"
+    >
+        <sidebar :is-mobile="isMobile" :mobile-mode="mobileMode" />
         <div class="lpList lpTransition">
+            <div class="lpMobileTabs">
+                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'list'}" @click="setMobileMode('list')">
+                    List
+                </button>
+                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'lists'}" @click="setMobileMode('lists')">
+                    Lists
+                </button>
+                <button class="lpMobileTabButton" :class="{isActive: mobileMode === 'gear'}" @click="setMobileMode('gear')">
+                    Gear
+                </button>
+            </div>
             <div id="header" class="clearfix">
                 <span class="headerItem">
                     <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
@@ -157,6 +239,8 @@ export default {
     data() {
         return {
             isLoaded: false,
+            isMobile: false,
+            mobileMode: 'list',
         };
     },
     computed: {
@@ -169,6 +253,12 @@ export default {
         isSignedIn() {
             return this.$store.state.loggedIn;
         },
+        showSidebar() {
+            if (this.isMobile) {
+                return this.mobileMode !== 'list';
+            }
+            return this.library.showSidebar;
+        },
     },
     beforeMount() {
         if (!this.$store.state.library) {
@@ -177,9 +267,29 @@ export default {
             this.isLoaded = true;
         }
     },
+    mounted() {
+        this.updateIsMobile();
+        window.addEventListener('resize', this.updateIsMobile);
+    },
+    beforeDestroy() {
+        window.removeEventListener('resize', this.updateIsMobile);
+    },
     methods: {
         toggleSidebar() {
+            if (this.isMobile) {
+                this.mobileMode = (this.mobileMode === 'list') ? 'lists' : 'list';
+                return;
+            }
             this.$store.commit('toggleSidebar');
+        },
+        setMobileMode(mode) {
+            this.mobileMode = mode;
+        },
+        updateIsMobile() {
+            this.isMobile = window.matchMedia('(max-width: 900px)').matches;
+            if (!this.isMobile) {
+                this.mobileMode = 'list';
+            }
         },
         updateListName(evt) {
             this.$store.commit('updateListName', { id: this.list.id, name: evt.target.value });
