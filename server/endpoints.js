@@ -69,13 +69,23 @@ router.post('/register', (req, res) => {
     logWithRequest(req, { message: 'Attempting to register', username });
 
     db.users.find({ username }, (err, users) => {
-        if (err || users.length) {
+        if (err) {
+            logWithRequest(req, { message: 'Username lookup error', username, error: err.message });
+            return res.status(500).json({ errors: [{ message: 'An error occurred while creating your account. Please try again.' }] });
+        }
+
+        if (users.length) {
             logWithRequest(req, { message: 'User exists', username });
             return res.status(400).json({ errors: [{ field: 'username', message: 'That username already exists, please pick a different username.' }] });
         }
 
         db.users.find({ email }, (err, users) => {
-            if (err || users.length) {
+            if (err) {
+                logWithRequest(req, { message: 'Email lookup error', email, error: err.message });
+                return res.status(500).json({ errors: [{ message: 'An error occurred while creating your account. Please try again.' }] });
+            }
+
+            if (users.length) {
                 logWithRequest(req, { message: 'User email exists', email });
                 return res.status(400).json({ errors: [{ field: 'email', message: 'A user with that email already exists.' }] });
             }
