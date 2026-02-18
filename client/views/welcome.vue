@@ -55,7 +55,7 @@ $welcomeVerticalSpacing: 80px;
 .lpWelcomeRegisterContainer {
     display: flex;
     flex: 0 0 550px;
-    margin-right: $spacingLarge;
+    margin-left: $spacingLarge;
 }
 
 .lpWelcomeSigninContainer {
@@ -128,7 +128,7 @@ $welcomeVerticalSpacing: 80px;
     }
 
     .lpWelcomeRegisterContainer {
-        margin-right: 0;
+        margin-left: 0;
         margin-bottom: $spacingLarge;
         padding: $spacingMedium;
         flex-direction: column;
@@ -164,8 +164,14 @@ $welcomeVerticalSpacing: 80px;
             </div>
         </div>
         <div id="lpWelcome" class="lpContainer">
-            <h1><strong>LighterPack</strong> helps you track the gear you bring on adventures.</h1>
+            <h1><strong>LighterPack (dev)</strong> helps you track the gear you bring on adventures.</h1>
             <div class="lpWelcomeContent">
+                <div class="lpWelcomeSigninContainer">
+                    <h3 class="lpWelcomeContainerHeader">
+                        Sign in
+                    </h3>
+                    <SigninForm />
+                </div>
                 <div class="lpWelcomeRegisterContainer">
                     <div class="lpWelcomeRegister">
                         <h3 class="lpWelcomeContainerHeader">
@@ -187,12 +193,6 @@ $welcomeVerticalSpacing: 80px;
                         </ul>
                         <img id="lpWelcomeScreenshot" src="/images/screenshot.jpg" alt="A screenshot of the LighterPack interface">
                     </div>
-                </div>
-                <div class="lpWelcomeSigninContainer">
-                    <h3 class="lpWelcomeContainerHeader">
-                        Sign in
-                    </h3>
-                    <SigninForm />
                 </div>
             </div>
         </div>
