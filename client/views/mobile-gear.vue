@@ -45,6 +45,12 @@
     border-color: $blue1;
     color: #fff;
 }
+
+@media (max-width: 900px) and (orientation: landscape) {
+    #mobileGearContent {
+        padding: 0 8px 20px;
+    }
+}
 </style>
 
 <template>

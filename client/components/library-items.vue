@@ -146,6 +146,7 @@
     margin: 0 0 10px;
     padding: 10px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .lpLibraryItem.isMobileGear .lpName,
