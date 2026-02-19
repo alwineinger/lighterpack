@@ -33,6 +33,21 @@ test.describe('Mobile layout', () => {
 
     const overflow = await getHorizontalOverflow(page);
     expect(overflow).toBeLessThan(24);
+
+    await expect(page.getByRole('heading', { name: /Totals/i })).toBeVisible();
+    await expect(page.getByPlaceholder('List Name')).toHaveCSS('font-size', '24px');
+
+    await page.getByText('Share', { exact: false }).first().click();
+    await expect(page.getByLabel('Share your list')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Export to CSV/i })).toBeVisible();
+
+    await page.getByText('Settings', { exact: false }).first().click();
+    await page.getByLabel('Item images').check();
+    await page.getByPlaceholder('Name').first().click();
+    await page.getByRole('img').first().click();
+    await expect(page.locator('#lpImageDialog img')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#lpImageDialog img')).toBeHidden();
   });
 
   test('should remain editable and compact at 375px width', async ({ page }) => {
@@ -42,6 +57,22 @@ test.describe('Mobile layout', () => {
     await page.getByLabel('Item weight').first().fill('20');
 
     await expect(page.getByText('Add new category')).toBeVisible();
+    await expect(page.getByPlaceholder('Name').first()).toHaveCSS('font-size', '16px');
+
+    await page.getByText('Share', { exact: false }).first().click();
+    await expect(page.getByLabel('Share your list')).toBeVisible();
+
+    await page.getByText('Help', { exact: false }).first().click();
+    await expect(page.locator('#help h2')).toBeVisible();
+    const helpOverflow = await page.evaluate(() => {
+      const modal = document.getElementById('help');
+      if (!modal) return 0;
+      return modal.scrollWidth - modal.clientWidth;
+    });
+    expect(helpOverflow).toBeLessThanOrEqual(1);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#help h2')).toBeHidden();
+
     const overflow = await getHorizontalOverflow(page);
     expect(overflow).toBeLessThan(24);
   });
