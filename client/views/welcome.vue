@@ -91,16 +91,6 @@ $welcomeVerticalSpacing: 80px;
     max-width: 96%; //visual alignment with content
 }
 
-#lpLaunchBanner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: $yellow1;
-    padding: $spacingSmall;
-    text-align: center;
-}
-
 @media (max-width: 980px) {
     #lpWelcomeContainer {
         padding-top: 60px;
@@ -142,27 +132,14 @@ $welcomeVerticalSpacing: 80px;
 }
 
 @media (max-width: 600px) {
-    #lpWelcomeContainer {
-        padding-top: 70px;
-    }
-
     .lpContainer {
         padding: 0 $spacingSmall;
-    }
-
-    #lpLaunchBanner {
-        position: static;
     }
 }
 </style>
 
 <template>
     <div id="lpWelcomeContainer">
-        <div id="lpLaunchBanner">
-            <div class="lpContainer">
-                <strong>Welcome to the new version of LighterPack!</strong> We hope you like it, and if you have any questions please <a href="mailto:info@lighterpack.com" class="lpHref">get in touch</a>.
-            </div>
-        </div>
         <div id="lpWelcome" class="lpContainer">
             <h1><strong>LighterPack (dev)</strong> helps you track the gear you bring on adventures.</h1>
             <div class="lpWelcomeContent">
