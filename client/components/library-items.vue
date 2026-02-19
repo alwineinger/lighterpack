@@ -124,19 +124,23 @@
         white-space: nowrap;
     }
 
-    .lpHandle {
-        align-self: stretch;
+    .lpLibraryActions {
+        align-items: center;
+        display: inline-flex;
+        gap: 8px;
         grid-area: actions;
-        height: auto;
         justify-self: end;
+    }
+
+    .lpHandle,
+    .lpRemove,
+    .lpAdd {
         position: static;
     }
 
-    .lpRemove {
-        align-self: center;
-        grid-area: actions;
-        justify-self: end;
-        position: static;
+    .lpHandle {
+        align-self: stretch;
+        height: auto;
     }
 
     #library.lpSearching & {
@@ -179,7 +183,8 @@
 }
 
 .lpLibraryItem.isMobileGear .lpRemove,
-.lpLibraryItem.isMobileGear .lpHandle {
+.lpLibraryItem.isMobileGear .lpHandle,
+.lpLibraryItem.isMobileGear .lpLibraryActions {
     justify-self: start;
 }
 
@@ -210,7 +215,7 @@
         <h2>Gear</h2>
         <div id="libraryToolbar">
             <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
-            <div v-if="!mobileGear" class="lpBulkAddBar">
+            <div v-if="supportsMultiSelect" class="lpBulkAddBar">
                 <label class="lpBulkToggle">
                     <input v-model="bulkSelectEnabled" type="checkbox">
                     Select multiple
@@ -242,14 +247,6 @@
                         {{ category.name || 'New category' }}
                     </option>
                 </select>
-                <button
-                    class="lpButton lpSmall"
-                    type="button"
-                    :disabled="filteredItems.length === 0"
-                    @click="addAllVisibleToCategory"
-                >
-                    Add all visible ({{ filteredItems.length }})
-                </button>
             </div>
         </div>
         <ul id="library">
@@ -271,8 +268,16 @@
                 <span class="lpDescription">
                     {{ item.description }}
                 </span>
-                <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpSprite lpSpriteRemove" /></a>
-                <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
+                <div class="lpLibraryActions">
+                    <a
+                        v-if="!item.inCurrentList"
+                        class="lpAdd"
+                        title="Add this item to your list"
+                        @click="addItemToCategory(item.id)"
+                    ><i class="lpSprite lpSpriteAdd" /></a>
+                    <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpSprite lpSpriteRemove" /></a>
+                    <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
+                </div>
             </li>
         </ul>
     </section>
@@ -347,6 +352,9 @@ export default {
         categories() {
             return this.list.categoryIds.map((id) => this.library.getCategoryById(id));
         },
+        supportsMultiSelect() {
+            return !this.mobileGear && !this.responsive.isNarrowViewport;
+        },
     },
     watch: {
         categories() {
@@ -380,9 +388,9 @@ export default {
     },
     methods: {
         updateBulkSelectForViewport() {
-            const isMobileLikeViewport = this.responsive.isCompactViewport || this.responsive.isCoarsePointer;
-            if (isMobileLikeViewport && !this.mobileGear && !this.bulkSelectEnabled) {
-                this.bulkSelectEnabled = true;
+            if (!this.supportsMultiSelect) {
+                this.bulkSelectEnabled = false;
+                this.clearSelection();
             }
         },
         ensureBulkCategory() {
@@ -430,6 +438,23 @@ export default {
             this.filteredItems.forEach((listItem) => {
                 this.$store.commit('addItemToCategory', { itemId: listItem.id, categoryId: dropCategory.id, dropIndex });
                 dropIndex += 1;
+            });
+        },
+        addItemToCategory(itemId) {
+            const dropCategory = this.library.getCategoryById(this.bulkCategoryId) || this.categories[0];
+            if (!dropCategory) {
+                return;
+            }
+
+            const currentListItemIds = new Set(this.library.getItemsInCurrentList());
+            if (currentListItemIds.has(itemId)) {
+                return;
+            }
+
+            this.$store.commit('addItemToCategory', {
+                itemId,
+                categoryId: dropCategory.id,
+                dropIndex: dropCategory.categoryItems.length,
             });
         },
         handleItemDrag() {
