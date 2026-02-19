@@ -22,6 +22,18 @@ async function getHorizontalOverflow(page) {
   });
 }
 
+async function getMinTabTouchTarget(page) {
+  return page.locator('.lpMobileTabButton').evaluateAll((nodes) => {
+    if (!nodes.length) {
+      return 0;
+    }
+    return Math.min(...nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      return Math.min(rect.height, rect.width);
+    }));
+  });
+}
+
 test.describe('Mobile layout', () => {
   test('should be editable without horizontal overflow on iPhone 16 Pro portrait', async ({ page }) => {
     await registerAndOpenList(page, { width: 393, height: 852 });
@@ -48,6 +60,9 @@ test.describe('Mobile layout', () => {
     await expect(page.locator('#lpImageDialog img')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('#lpImageDialog img')).toBeHidden();
+
+    const minTouchTarget = await getMinTabTouchTarget(page);
+    expect(minTouchTarget).toBeGreaterThanOrEqual(36);
   });
 
   test('should remain editable and compact at 375px width', async ({ page }) => {
@@ -80,15 +95,24 @@ test.describe('Mobile layout', () => {
   test('should support list/lists/gear tabs in compact landscape-like constraints', async ({ page }) => {
     await registerAndOpenList(page, { width: 852, height: 393 });
 
+    await page.getByPlaceholder('List Name').fill('Shared State Pack');
+    await page.getByPlaceholder('Name').first().fill('Nav item');
+
     await expect(page.getByRole('link', { name: 'Lists' })).toBeVisible();
     await page.getByRole('link', { name: 'Lists' }).click();
     await expect(page.getByRole('heading', { name: 'Lists' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back' })).toBeVisible();
 
     await page.getByRole('link', { name: 'Gear' }).click();
     await expect(page.getByRole('heading', { name: 'Gear' })).toBeVisible();
+    const minTouchTarget = await getMinTabTouchTarget(page);
+    expect(minTouchTarget).toBeGreaterThanOrEqual(36);
+    await page.mouse.wheel(0, 500);
+    await expect(page.getByRole('link', { name: 'List' })).toBeVisible();
 
     await page.getByRole('link', { name: 'List' }).click();
-    await page.getByPlaceholder('List Name').fill('Landscape Test Pack');
+    await expect(page.getByPlaceholder('List Name')).toHaveValue('Shared State Pack');
+    await expect(page.getByPlaceholder('Name').first()).toHaveValue('Nav item');
 
     const overflow = await getHorizontalOverflow(page);
     expect(overflow).toBeLessThan(24);
