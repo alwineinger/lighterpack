@@ -280,6 +280,7 @@
 
 <script>
 import utilsMixin from '../mixins/utils-mixin.js';
+import { getResponsiveState, subscribeResponsiveState } from '../utils/responsive';
 
 const dragula = require('dragula');
 
@@ -300,7 +301,8 @@ export default {
             bulkSelectEnabled: false,
             selectedItemIds: [],
             bulkCategoryId: null,
-            isMobile: false,
+            responsive: getResponsiveState(),
+            unsubscribeResponsive: null,
         };
     },
     computed: {
@@ -355,22 +357,31 @@ export default {
             });
             this.ensureBulkCategory();
         },
+        'responsive.isCompactViewport': function () {
+            this.updateBulkSelectForViewport();
+        },
+        'responsive.isCoarsePointer': function () {
+            this.updateBulkSelectForViewport();
+        },
     },
     mounted() {
         if (!this.mobileGear) {
             this.handleItemDrag();
         }
-        this.updateIsMobile();
+        this.updateBulkSelectForViewport();
         this.ensureBulkCategory();
-        window.addEventListener('resize', this.updateIsMobile);
+        this.unsubscribeResponsive = subscribeResponsiveState();
     },
     beforeDestroy() {
-        window.removeEventListener('resize', this.updateIsMobile);
+        if (this.unsubscribeResponsive) {
+            this.unsubscribeResponsive();
+            this.unsubscribeResponsive = null;
+        }
     },
     methods: {
-        updateIsMobile() {
-            this.isMobile = window.matchMedia('(max-width: 900px)').matches;
-            if (this.isMobile && !this.mobileGear && !this.bulkSelectEnabled) {
+        updateBulkSelectForViewport() {
+            const isMobileLikeViewport = this.responsive.isCompactViewport || this.responsive.isCoarsePointer;
+            if (isMobileLikeViewport && !this.mobileGear && !this.bulkSelectEnabled) {
                 this.bulkSelectEnabled = true;
             }
         },
