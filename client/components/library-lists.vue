@@ -165,7 +165,7 @@ export default {
     methods: {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
-            if (this.mobileLists) {
+            if (this.mobileLists || this.$route.path === '/lists') {
                 this.$router.push('/');
             }
         },
