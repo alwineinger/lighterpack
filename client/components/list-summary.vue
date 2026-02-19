@@ -30,34 +30,28 @@
 
 @media (max-width: 900px) {
     .lpListSummary {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .lpChartContainer {
-        flex: 0 0 auto;
-        margin: 0 auto;
-        max-width: 320px;
+        display: block;
         width: 100%;
     }
 
+    .lpChartContainer {
+        display: none;
+    }
+
     .lpTotalsContainer {
+        flex: 1 1 100%;
+        max-width: 100%;
         width: 100%;
     }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
     .lpListSummary {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-
-    .lpChartContainer {
-        max-width: 220px;
+        width: 100%;
     }
 
     .lpTotalsContainer {
-        flex: 1 1 auto;
+        width: 100%;
     }
 }
 </style>
