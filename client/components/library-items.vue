@@ -190,6 +190,36 @@
     justify-self: start;
 }
 
+.lpTrashCanIcon {
+    background: none;
+    display: inline-block;
+    height: 10px;
+    position: relative;
+    top: 0;
+    width: 8px;
+
+    &::before {
+        border: 1px solid #fff;
+        border-top: 0;
+        bottom: 0;
+        content: '';
+        left: 1px;
+        position: absolute;
+        right: 1px;
+        top: 3px;
+    }
+
+    &::after {
+        border: 1px solid #fff;
+        border-radius: 1px;
+        content: '';
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+}
+
 @media (max-width: 900px) {
     #library {
         max-height: 55vh;
@@ -277,7 +307,7 @@
                         title="Add this item to your list"
                         @click="addItemToCategory(item.id)"
                     ><i class="lpSprite lpSpriteAdd" /></a>
-                    <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpSprite lpSpriteRemove" /></a>
+                    <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpTrashCanIcon" /></a>
                     <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
                 </div>
             </li>
