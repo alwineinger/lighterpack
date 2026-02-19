@@ -220,17 +220,17 @@
                     <input v-model="bulkSelectEnabled" type="checkbox">
                     Select multiple
                 </label>
+                <select v-model="bulkCategoryId">
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.name || 'New category' }}
+                    </option>
+                </select>
                 <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="selectAllVisible">
                     Select all
                 </button>
                 <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="clearSelection">
                     Clear
                 </button>
-                <select v-if="bulkSelectEnabled" v-model="bulkCategoryId">
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
-                        {{ category.name || 'New category' }}
-                    </option>
-                </select>
                 <button
                     v-if="bulkSelectEnabled"
                     class="lpButton lpSmall"
