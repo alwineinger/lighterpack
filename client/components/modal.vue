@@ -5,15 +5,16 @@
     background: $background1;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.25);
     left: 50%;
-    max-height: calc(90% - (#{$spacingLarge} * 2));
+    max-height: calc(100vh - (max(#{$spacingMedium}, env(safe-area-inset-top)) + max(#{$spacingMedium}, env(safe-area-inset-bottom))));
+    max-width: min(560px, calc(100vw - (max(#{$spacingMedium}, env(safe-area-inset-left)) + max(#{$spacingMedium}, env(safe-area-inset-right)))));
     overflow-y: auto;
-    padding: $spacingLarge;
+    padding: clamp(#{$spacingMedium}, 3vw, #{$spacingLarge});
     position: fixed;
     text-align: left;
     top: 50%;
     transform: translateX(-50%) translateY(-50%);
     transition: all $transitionDuration;
-    width: 420px;
+    width: min(420px, calc(100vw - (max(#{$spacingMedium}, env(safe-area-inset-left)) + max(#{$spacingMedium}, env(safe-area-inset-right)))));
     z-index: $dialog;
 
     .lpHalf {
@@ -37,7 +38,7 @@
     }
 
     .lpContent {
-        max-height: 400px;
+        max-height: min(400px, 60vh);
         overflow-y: scroll;
     }
 }

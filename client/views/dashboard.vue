@@ -4,8 +4,9 @@
 #header {
     align-items: baseline;
     display: flex;
-    height: 60px;
+    gap: 4px;
     margin: 0 -20px 20px; /* lpList padding */
+    min-height: 60px;
     position: relative;
 }
 
@@ -27,13 +28,14 @@
 #lpListName {
     font-size: 24px;
     font-weight: 600;
+    min-width: 0;
     padding: 12px 15px;
 }
 
 .headerItem {
     flex: 0 0 auto;
-    height: 100%;
-    padding: 17px 16px;
+    min-height: 100%;
+    padding: 14px 12px;
     position: relative;
 
     &:first-child {
@@ -48,7 +50,7 @@
 
     .lpTarget {
         font-weight: 600;
-        padding: 17px 16px 15px;
+        padding: 14px 12px;
     }
 
     &#lpListName {
@@ -67,18 +69,30 @@
 
 @media (max-width: 900px) {
     #header {
+        align-items: center;
         flex-wrap: wrap;
-        height: auto;
+        gap: 6px;
         margin: 0 -15px 15px;
+        min-height: auto;
     }
 
     #lpListName {
         flex: 1 1 auto;
-        min-width: 180px;
+        font-size: 20px;
+        min-width: min(200px, 100%);
+        padding: 12px;
     }
 
     .headerItem {
         padding: 12px;
+    }
+
+    #share,
+    #settings {
+        .lpTarget {
+            min-height: 44px;
+            white-space: nowrap;
+        }
     }
 
     #main #sidebar {
