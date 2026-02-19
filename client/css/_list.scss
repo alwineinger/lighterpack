@@ -351,4 +351,17 @@ input.lpCategoryName { /* specificity */
     input.lpCategoryName {
         flex-basis: 100%;
     }
+
+    .lpListSummaryMain {
+        display: none;
+    }
+
+    .lpMobileChartToggle {
+        margin: 8px 0 12px;
+        text-align: center;
+    }
+
+    .lpMobileChartContainer {
+        margin: 0 0 12px;
+    }
 }

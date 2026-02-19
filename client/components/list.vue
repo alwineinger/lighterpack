@@ -63,7 +63,7 @@
                 <strong>Note:</strong> Your data is being saved to your local computer. In order to share your lists please register an account.
             </p>
         </div>
-        <list-summary v-if="!isListNew" :list="list" />
+        <list-summary v-if="!isListNew" class="lpListSummaryMain" :list="list" />
 
 
         <div style="clear: both;" />
@@ -76,6 +76,16 @@
         <ul class="lpCategories">
             <category v-for="category in categories" :key="category.id" :category="category" />
         </ul>
+
+        <div v-if="!isListNew" class="lpMobileChartToggle">
+            <a class="lpHref" @click="toggleMobileChart">
+                {{ showMobileChart ? 'Hide chart' : 'Show chart' }}
+            </a>
+        </div>
+
+        <div v-if="showMobileChart && !isListNew" class="lpMobileChartContainer">
+            <list-summary :list="list" :show-totals="false" :show-chart="true" />
+        </div>
 
         <hr>
 
@@ -102,6 +112,7 @@ export default {
         return {
             onboardingCompleted: false,
             itemDrake: null,
+            showMobileChart: false,
         };
     },
     computed: {
@@ -135,6 +146,9 @@ export default {
     methods: {
         newCategory() {
             this.$store.commit('newCategory', this.list);
+        },
+        toggleMobileChart() {
+            this.showMobileChart = !this.showMobileChart;
         },
         updateListDescription() {
             this.$store.commit('updateListDescription', this.list);

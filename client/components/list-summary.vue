@@ -57,11 +57,11 @@
 </style>
 
 <template>
-    <div class="lpListSummary">
+    <div v-if="showTotals || showChart" class="lpListSummary" :class="{lpChartOnly: !showTotals}">
         <div class="lpChartContainer">
-            <canvas class="lpChart" height="260" width="260" />
+            <canvas ref="chartCanvas" class="lpChart" height="260" width="260" />
         </div>
-        <div class="lpTotalsContainer">
+        <div v-if="showTotals" class="lpTotalsContainer">
             <ul class="lpTotals lpTable lpDataTable">
                 <li class="lpRow lpHeader">
                     <span class="lpCell">&nbsp;</span>
@@ -161,13 +161,26 @@ export default {
         unitSelect,
     },
     mixins: [utilsMixin],
-    props: ['list'],
     data() {
         return {
             chart: null,
             hoveredCategoryId: null,
             chartSize: 260,
         };
+    },
+    props: {
+        list: {
+            type: Object,
+            required: true,
+        },
+        showTotals: {
+            type: Boolean,
+            default: true,
+        },
+        showChart: {
+            type: Boolean,
+            default: true,
+        },
     },
     computed: {
         library() {
@@ -195,8 +208,11 @@ export default {
     },
     methods: {
         updateChart(type) {
-            const canvas = this.$el.querySelector('.lpChart');
+            const canvas = this.$refs.chartCanvas;
             if (canvas) {
+                if (!this.showChart) {
+                    return null;
+                }
                 const maxWidth = 260;
                 const minWidth = 180;
                 const containerWidth = Math.floor(Math.min(maxWidth, Math.max(minWidth, this.$el.clientWidth * 0.9)));
