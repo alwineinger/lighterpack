@@ -8,7 +8,9 @@
 
 #library {
     flex: 1 0 25vh;
+    margin: 0;
     overflow-y: scroll;
+    padding: 0;
 }
 
 #libraryContainer.lpMobileGearView {
