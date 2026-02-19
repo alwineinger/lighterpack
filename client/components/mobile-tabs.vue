@@ -5,6 +5,7 @@
     display: flex;
     gap: 8px;
     margin: 0 0 12px;
+    min-width: 0;
 }
 
 .lpMobileTabButton {
@@ -22,6 +23,13 @@
     text-decoration: none;
 }
 
+.lpMobileTabButtonList {
+    max-width: 44vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .lpMobileTabButton.isActive {
     background: $blue1;
     border-color: $blue1;
@@ -31,9 +39,9 @@
 
 <template>
     <div class="lpMobileTabs" aria-label="Primary mobile sections">
-        <span v-if="active === 'list'" class="lpMobileTabButton isActive">List</span>
-        <router-link v-else class="lpMobileTabButton" to="/">
-            List
+        <span v-if="active === 'list'" class="lpMobileTabButton lpMobileTabButtonList isActive" :title="currentListLabel">{{ currentListLabel }}</span>
+        <router-link v-else class="lpMobileTabButton lpMobileTabButtonList" to="/" :title="currentListLabel">
+            {{ currentListLabel }}
         </router-link>
 
         <span v-if="active === 'lists'" class="lpMobileTabButton isActive">Lists</span>
@@ -58,6 +66,17 @@ export default {
             validator(value) {
                 return ['list', 'lists', 'gear'].indexOf(value) > -1;
             },
+        },
+    },
+    computed: {
+        currentListLabel() {
+            const library = this.$store.state.library;
+            if (!library) {
+                return 'List';
+            }
+
+            const activeList = library.getListById(library.defaultListId);
+            return activeList && activeList.name ? activeList.name : 'List';
         },
     },
 };
