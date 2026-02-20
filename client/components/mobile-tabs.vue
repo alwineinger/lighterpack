@@ -39,8 +39,8 @@
 
 <template>
     <div class="lpMobileTabs" aria-label="Primary mobile sections">
-        <span v-if="active === 'list'" class="lpMobileTabButton lpMobileTabButtonList isActive" :title="currentListLabel">{{ currentListLabel }}</span>
-        <router-link v-else class="lpMobileTabButton lpMobileTabButtonList" to="/" :title="currentListLabel">
+        <span v-if="active === 'list'" class="lpMobileTabButton lpMobileTabButtonList isActive" :aria-label="currentListLabel">{{ currentListLabel }}</span>
+        <router-link v-else class="lpMobileTabButton lpMobileTabButtonList" to="/" :aria-label="currentListLabel">
             {{ currentListLabel }}
         </router-link>
 
