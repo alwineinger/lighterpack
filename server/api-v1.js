@@ -519,7 +519,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                                 groupItems.push({
                                     itemId: item.id,
                                     categoryId: category.id,
-                                    name: member.visibility === 'summary' ? 'Hidden item' : item.name,
+                                    name: item.name,
                                     categoryName: category.name,
                                     qty: categoryItem.qty,
                                     weightMg: item.weight * categoryItem.qty,

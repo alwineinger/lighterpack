@@ -53,30 +53,6 @@
             </div>
         </div>
 
-        <div class="lpTripSectionHeader">
-            <h2>Shared content</h2>
-        </div>
-        <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
-            <h3>{{ member.username || member.email }} — {{ member.listName || 'No shared list' }} ({{ member.visibility }})</h3>
-            <div v-if="member.sharedContent && member.sharedContent.mode === 'summary'">
-                <ul>
-                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId">
-                        {{ category.categoryName }}: {{ category.itemCount }} items — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
-                    </li>
-                </ul>
-            </div>
-            <div v-else-if="member.sharedContent && member.sharedContent.items && member.sharedContent.items.length">
-                <ul>
-                    <li v-for="item in member.sharedContent.items" :key="item.itemId + '-' + item.categoryId">
-                        {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
-                    </li>
-                </ul>
-            </div>
-            <p v-else>
-                No shared items yet.
-            </p>
-        </div>
-
         <div v-for="group in trip.groupGearByUser" :key="group.userKey" class="lpTripGroupPanel">
             <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}</h3>
             <ul>
@@ -105,6 +81,30 @@
                     </option>
                 </select>
             </div>
+        </div>
+
+        <div class="lpTripSectionHeader">
+            <h2>Shared content</h2>
+        </div>
+        <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
+            <h3>{{ member.username || member.email }} — {{ member.listName || 'No shared list' }} ({{ member.visibility }})</h3>
+            <div v-if="member.sharedContent && member.sharedContent.mode === 'summary'">
+                <ul>
+                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId">
+                        {{ category.categoryName }}: {{ category.itemCount }} items — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    </li>
+                </ul>
+            </div>
+            <div v-else-if="member.sharedContent && member.sharedContent.items && member.sharedContent.items.length">
+                <ul>
+                    <li v-for="item in member.sharedContent.items" :key="item.itemId + '-' + item.categoryId">
+                        {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    </li>
+                </ul>
+            </div>
+            <p v-else>
+                No shared items yet.
+            </p>
         </div>
         <ul>
             <li v-for="member in trip.members" :key="member.userId || member.email">
