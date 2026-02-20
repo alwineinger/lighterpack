@@ -283,7 +283,10 @@ export default {
             this.$store.commit('setTotalUnit', unit);
         },
         getChartData() {
-            const points = {};
+            const chartData = {
+                total: this.totalGroupWeightMg,
+                points: {},
+            };
 
             this.sortedGroups.forEach((group) => {
                 const userPoint = {
@@ -291,28 +294,27 @@ export default {
                     name: group.label,
                     total: group.totalWeightMg,
                     points: {},
+                    parent: chartData,
                 };
 
-                group.items.forEach((item) => {
-                    const key = `${item.itemId}-${item.categoryId}`;
+                group.items.forEach((item, index) => {
+                    const key = `${item.itemId}-${item.categoryId}-${index}`;
                     userPoint.points[key] = {
                         id: key,
                         name: `${item.name} (${item.categoryName})`,
                         total: item.weightMg,
                         percent: group.totalWeightMg ? item.weightMg / group.totalWeightMg : 0,
+                        parent: userPoint,
                     };
                 });
 
-                points[group.userKey] = {
+                chartData.points[group.userKey] = {
                     ...userPoint,
                     percent: this.totalGroupWeightMg ? group.totalWeightMg / this.totalGroupWeightMg : 0,
                 };
             });
 
-            return {
-                total: this.totalGroupWeightMg,
-                points,
-            };
+            return chartData;
         },
         updateChart() {
             const canvas = this.$refs.chartCanvas;
