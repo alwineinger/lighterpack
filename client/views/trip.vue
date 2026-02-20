@@ -65,14 +65,39 @@ export default {
                 this.trip = trip;
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
-                    const listIdRaw = window.prompt('Select list id to share with this trip', this.$store.state.library.defaultListId);
-                    if (!listIdRaw) {
+                    const availableLists = this.$store.state.library.lists || [];
+                    const listChoices = availableLists.map((list) => {
+                        const name = list.name && list.name.trim() ? list.name.trim() : `Untitled list #${list.id}`;
+                        return {
+                            id: list.id,
+                            name,
+                        };
+                    });
+
+                    if (!listChoices.length) {
                         return;
                     }
+
+                    const defaultListId = this.$store.state.library.defaultListId;
+                    const defaultList = listChoices.find((list) => list.id === defaultListId) || listChoices[0];
+                    const listNameRaw = window.prompt(
+                        `Select a list to share with this trip:\n${listChoices.map((list) => `• ${list.name}`).join('\n')}`,
+                        defaultList.name,
+                    );
+
+                    if (!listNameRaw) {
+                        return;
+                    }
+
+                    const selectedList = listChoices.find((list) => list.name.toLowerCase() === listNameRaw.trim().toLowerCase());
+                    if (!selectedList) {
+                        return;
+                    }
+
                     const visibility = window.confirm('Share full details? Click Cancel for category + total only.') ? 'full' : 'summary';
                     acceptTripInvitation(trip.id, {
                         inviteToken: pendingInvite.token,
-                        listId: parseInt(listIdRaw, 10),
+                        listId: selectedList.id,
                         visibility,
                     }).then(() => this.refresh());
                 }
