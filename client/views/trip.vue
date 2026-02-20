@@ -51,16 +51,21 @@
             <div class="lpTotalsContainer">
                 <ul class="lpTotals lpTable lpDataTable">
                     <li class="lpRow lpHeader">
+                        <span class="lpCell">&nbsp;</span>
                         <span class="lpCell">User</span>
                         <span class="lpCell">Weight</span>
                     </li>
                     <li v-for="group in sortedGroups" :key="group.userKey" class="lpRow lpTotalCategory">
+                        <span class="lpCell lpLegendCell">
+                            <colorPicker :color="groupColorHex(group)" @colorChange="updateGroupColor(group, $event)" />
+                        </span>
                         <span class="lpCell">{{ group.label }}</span>
                         <span class="lpCell lpNumber">
                             {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
                         </span>
                     </li>
                     <li class="lpRow lpFooter lpTotal">
+                        <span class="lpCell" />
                         <span class="lpCell lpSubtotal">Total</span>
                         <span class="lpCell lpNumber lpSubtotal">
                             {{ totalGroupWeightMg | displayWeight(library.totalUnit) }}
@@ -226,16 +231,19 @@
 import {
     acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripName, updateTripNotes,
 } from '../api/mobile-api';
+import colorPicker from '../components/colorpicker.vue';
 import unitSelect from '../components/unit-select.vue';
 
 const markdown = require('markdown').markdown;
 
 const pies = require('../pies.js');
+const colorUtils = require('../utils/color.js');
 const utilsMixin = require('../mixins/utils-mixin.js');
 
 export default {
     name: 'TripView',
     components: {
+        colorPicker,
         unitSelect,
     },
     mixins: [utilsMixin],
@@ -251,6 +259,7 @@ export default {
             isEditingTripNotes: false,
             tripNotesDraft: '',
             isRenamingTrip: false,
+            groupColorsByKey: {},
         };
     },
     computed: {
@@ -599,11 +608,12 @@ export default {
                 points: {},
             };
 
-            this.sortedGroups.forEach((group) => {
+            this.sortedGroups.forEach((group, index) => {
                 const userPoint = {
                     id: group.userKey,
                     name: group.label,
                     total: group.totalWeightMg,
+                    color: colorUtils.hexToRgb(this.groupColorHex(group, index)),
                     points: {},
                     parent: chartData,
                 };
@@ -626,6 +636,20 @@ export default {
             });
 
             return chartData;
+        },
+        groupColorHex(group, index) {
+            if (this.groupColorsByKey[group.userKey]) {
+                return this.groupColorsByKey[group.userKey];
+            }
+
+            const fallbackColor = colorUtils.getColor(typeof index === 'number' ? index : this.sortedGroups.findIndex((entry) => entry.userKey === group.userKey));
+            const fallbackHex = colorUtils.rgbToHex(fallbackColor);
+            this.$set(this.groupColorsByKey, group.userKey, fallbackHex);
+            return fallbackHex;
+        },
+        updateGroupColor(group, color) {
+            this.$set(this.groupColorsByKey, group.userKey, color);
+            this.updateChart();
         },
         updateChart() {
             const canvas = this.$refs.chartCanvas;
