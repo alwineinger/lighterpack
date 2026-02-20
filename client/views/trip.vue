@@ -4,7 +4,12 @@
             <router-link class="lpHref" to="/">
                 Back to list
             </router-link>
-            <h1>{{ trip.name }}</h1>
+            <div class="lpTripTitleWrap">
+                <h1>{{ trip.name }}</h1>
+                <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
+                    Rename trip
+                </button>
+            </div>
         </div>
 
         <div class="lpTripNotes">
@@ -219,7 +224,7 @@
 
 <script>
 import {
-    acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripNotes,
+    acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripName, updateTripNotes,
 } from '../api/mobile-api';
 import unitSelect from '../components/unit-select.vue';
 
@@ -245,6 +250,7 @@ export default {
             },
             isEditingTripNotes: false,
             tripNotesDraft: '',
+            isRenamingTrip: false,
         };
     },
     computed: {
@@ -312,6 +318,9 @@ export default {
                 return false;
             }
             return ['owner', 'editor'].indexOf(this.trip.currentUserMember.role) > -1;
+        },
+        canRenameTrip() {
+            return !!(this.trip && this.trip.currentUserMember && this.trip.currentUserMember.role === 'owner');
         },
         hasTripNotes() {
             return !!(this.trip && this.trip.notes && this.trip.notes.trim());
@@ -409,6 +418,7 @@ export default {
                 this.trip = trip;
                 this.tripNotesDraft = trip.notes || '';
                 this.isEditingTripNotes = false;
+                this.isRenamingTrip = false;
                 this.$nextTick(this.updateChart);
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
@@ -479,6 +489,29 @@ export default {
                 this.trip.notes = response.notes || '';
                 this.tripNotesDraft = this.trip.notes;
                 this.isEditingTripNotes = false;
+            });
+        },
+        startEditingTripName() {
+            if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
+                return;
+            }
+
+            const currentName = this.trip.name || '';
+            const nextName = window.prompt('Rename trip', currentName);
+            if (nextName === null) {
+                return;
+            }
+
+            const trimmedName = nextName.trim();
+            if (!trimmedName || trimmedName === currentName) {
+                return;
+            }
+
+            this.isRenamingTrip = true;
+            updateTripName(this.trip.id, trimmedName).then((response) => {
+                this.trip.name = response.name || trimmedName;
+            }).finally(() => {
+                this.isRenamingTrip = false;
             });
         },
 
@@ -634,6 +667,13 @@ export default {
     align-items: center;
     display: flex;
     gap: 12px;
+}
+
+.lpTripTitleWrap {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .lpTripGroupPanel {

@@ -571,6 +571,44 @@ router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
     });
 });
 
+router.put('/api/v1/trips/:tripId/name', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            if (!canManageTrip(trip, user)) {
+                return apiError(res, 403, 'FORBIDDEN', 'Only owner can rename trip.');
+            }
+
+            const name = String(req.body.name || '').trim();
+            if (!name) {
+                return apiError(res, 400, 'INVALID_TRIP_NAME', 'Trip name is required.');
+            }
+
+            trip.name = name;
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update trip name.');
+                }
+                return res.status(200).json({
+                    data: {
+                        name: trip.name,
+                    },
+                });
+            });
+        });
+    });
+});
+
 router.put('/api/v1/trips/:tripId/notes', (req, res) => {
     withAuthenticatedUser(req, res, (user) => {
         const tripObjectId = parseObjectId(req.params.tripId);
