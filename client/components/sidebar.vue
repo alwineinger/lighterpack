@@ -78,6 +78,7 @@ $sidebarPadding: 20px;
             <h1>LighterPack <span>(dev)</span></h1>
 
             <libraryLists />
+            <libraryTrips />
             <libraryItems />
         </div>
     </div>
@@ -86,12 +87,14 @@ $sidebarPadding: 20px;
 <script>
 import libraryItems from './library-items.vue';
 import libraryLists from './library-lists.vue';
+import libraryTrips from './library-trips.vue';
 
 export default {
     name: 'Sidebar',
     components: {
         libraryItems,
         libraryLists,
+        libraryTrips,
     },
 };
 </script>

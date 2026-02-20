@@ -30,7 +30,7 @@ export default {
             type: String,
             required: true,
             validator(value) {
-                return ['lists', 'gear'].indexOf(value) > -1;
+                return ['lists', 'gear', 'trips'].indexOf(value) > -1;
             },
         },
     },

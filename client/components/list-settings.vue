@@ -89,6 +89,11 @@ export default {
                 cssClass: 'lpShowConsumable',
                 value: false,
             }, {
+                name: 'group',
+                displayName: 'Group items',
+                cssClass: 'lpShowGroup',
+                value: false,
+            }, {
                 name: 'listDescription',
                 displayName: 'List descriptions',
                 cssClass: 'lpShowListDescription',

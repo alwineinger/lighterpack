@@ -8,6 +8,7 @@ const defaultOptionalFields = {
     price: false,
     worn: true,
     consumable: true,
+    group: true,
     listDescription: false,
 };
 
@@ -61,6 +62,7 @@ Category.prototype.addItem = function (partialCategoryItem) {
         qty: 1,
         worn: 0,
         consumable: false,
+        group: false,
         star: 0,
         itemId: null,
         _isNew: false,
@@ -146,6 +148,9 @@ Category.prototype.load = function (input) {
         }
         if (!categoryItem.star) {
             categoryItem.star = 0;
+        }
+        if (typeof categoryItem.group === 'undefined') {
+            categoryItem.group = false;
         }
         if (!this.library.getItemById(categoryItem.itemId)) {
             this.categoryItems.splice(index, 1);
@@ -345,7 +350,6 @@ const Library = function () {
     this.firstRun();
     return this;
 };
-
 
 Library.prototype.firstRun = function () {
     const firstList = this.newList();
@@ -654,7 +658,7 @@ Library.prototype.sequenceShouldBeCorrect = function (serializedLibrary) {
 Library.prototype.idsShouldBeInts = function (serializedLibrary) {
     // Some lists of Ids were strings previously. They should be numbers.
     serializedLibrary.lists.forEach((list) => {
-        list.categoryIds = list.categoryIds.map(categoryId => parseInt(categoryId, 10));
+        list.categoryIds = list.categoryIds.map((categoryId) => parseInt(categoryId, 10));
     });
 };
 

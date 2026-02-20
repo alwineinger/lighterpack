@@ -37,6 +37,42 @@ paths:
       responses:
         '201':
           description: Created share id
+
+  /api/v1/trips:
+    get:
+      summary: List trips for current user
+      responses:
+        '200':
+          description: Trip list
+    post:
+      summary: Create a trip owned by the current user
+      responses:
+        '201':
+          description: Trip created
+  /api/v1/trips/{tripId}:
+    get:
+      summary: Load a single trip including shared members and group gear panel data
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trip detail
+  /api/v1/trips/{tripId}/invitations:
+    post:
+      summary: Invite a user email as an editor/viewer on a trip
+      responses:
+        '201':
+          description: Invitation created
+  /api/v1/trips/{tripId}/accept:
+    post:
+      summary: Accept invitation and select list visibility to share with trip
+      responses:
+        '200':
+          description: Invitation accepted
 components:
   schemas:
     Error:
