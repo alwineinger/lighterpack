@@ -1,5 +1,8 @@
 # AGENTS.md
 
+This file provides repository-scoped instructions for AI coding agents working on LighterPack.
+It is written to be directly useful in both **Codex Web** and **Codex CLI** environments.
+
 ## Project overview
 LighterPack is a Vue 2 + Vuex single-page app with an Express + MongoDB backend. The web UI is the primary product; server-side routes provide auth, persistence, sharing pages, and API endpoints.
 
@@ -33,9 +36,28 @@ Set in `config/local.json` (preferred) or config override env:
 - `mailgunAPIKey`
 - `moderators`
 
+## Codex Web + Codex CLI operating guidance
+Use this section as the default execution playbook in either interface.
+
+1. **Inspect before editing**
+   - Read nearby files first and preserve existing conventions.
+   - Keep changes narrow; avoid broad refactors unless requested.
+2. **Prefer deterministic validation**
+   - Run the smallest relevant lint/test command first.
+   - If one command cannot run due environment limits, state the exact reason.
+3. **Minimize risk to user flows**
+   - Preserve auth/session behavior, list persistence formats, and sharing routes.
+   - Avoid changing API response shape unless explicitly requested.
+4. **Document behavior changes**
+   - If API/config/schema behavior changes, update relevant docs under `docs/`.
+5. **Commit/PR hygiene**
+   - Use clear, scoped commit messages.
+   - PR summaries should include what changed, why, and checks that were run.
+
 ## Test and lint commands
 - JS lint: `npm run lint:js`
 - CSS lint: `npm run lint:css`
+- Unit/integration (if present in branch): `npm test`
 - E2E: `npx playwright test`
 
 ## Code style and folder conventions
