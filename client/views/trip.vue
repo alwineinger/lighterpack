@@ -88,21 +88,51 @@
         </div>
         <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
             <h3>{{ member.username || member.email }} — {{ member.listName || 'No shared list' }} ({{ member.visibility }})</h3>
-            <div v-if="member.sharedContent && member.sharedContent.mode === 'summary'">
-                <ul>
-                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId">
-                        {{ category.categoryName }}: {{ category.itemCount }} items — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+            <div v-if="member.sharedContent && member.sharedContent.categories && member.sharedContent.categories.length" class="lpTripSharedSummary">
+                <ul class="lpTotals lpTable lpDataTable">
+                    <li class="lpRow lpHeader">
+                        <span class="lpCell">&nbsp;</span>
+                        <span class="lpCell">Category</span>
+                        <span class="lpCell">Weight</span>
+                    </li>
+                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId" class="lpTotalCategory lpRow">
+                        <span class="lpCell lpLegendCell">
+                            <span class="lpLegend" :style="{ 'background-color': category.categoryColor || '#999' }" />
+                        </span>
+                        <span class="lpCell">
+                            {{ category.categoryName }}
+                        </span>
+                        <span class="lpCell lpNumber">
+                            <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
+                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        </span>
+                    </li>
+                    <li class="lpRow lpFooter lpTotal">
+                        <span class="lpCell" />
+                        <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(member) + ' items'">Total</span>
+                        <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(member) + ' items'">
+                            <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(member) | displayWeight(library.totalUnit) }}</span>
+                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        </span>
                     </li>
                 </ul>
             </div>
-            <div v-else-if="member.sharedContent && member.sharedContent.items && member.sharedContent.items.length">
-                <ul>
-                    <li v-for="item in member.sharedContent.items" :key="item.itemId + '-' + item.categoryId">
-                        {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
-                    </li>
-                </ul>
+            <div v-if="isFullSharedContent(member)">
+                <div v-for="category in member.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
+                    <h4>
+                        {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    </h4>
+                    <ul v-if="category.items && category.items.length">
+                        <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
+                            {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                        </li>
+                    </ul>
+                    <p v-else>
+                        No items in this category.
+                    </p>
+                </div>
             </div>
-            <p v-else>
+            <p v-else-if="!member.sharedContent || !member.sharedContent.categories || !member.sharedContent.categories.length">
                 No shared items yet.
             </p>
         </div>
@@ -278,6 +308,17 @@ export default {
                 visibility,
             });
         },
+        getSharedTotalWeight(member) {
+            const totals = member && member.sharedContent && member.sharedContent.totals;
+            return totals ? totals.totalWeightMg : 0;
+        },
+        getSharedTotalItemCount(member) {
+            const totals = member && member.sharedContent && member.sharedContent.totals;
+            return totals ? totals.totalItemCount : 0;
+        },
+        isFullSharedContent(member) {
+            return !!(member && member.sharedContent && member.sharedContent.mode === 'full' && member.sharedContent.categories && member.sharedContent.categories.length);
+        },
 
         setTotalUnit(unit) {
             this.$store.commit('setTotalUnit', unit);
@@ -397,5 +438,22 @@ export default {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.lpTripSharedSummary {
+    margin-bottom: 12px;
+}
+
+.lpTripSharedCategoryItems {
+    margin-top: 10px;
+
+    h4 {
+        margin: 0 0 6px;
+    }
+
+    ul {
+        margin: 0;
+        padding-left: 20px;
+    }
 }
 </style>

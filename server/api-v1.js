@@ -120,6 +120,10 @@ function buildMemberSharedContent(library, list, visibility) {
     const isSummary = visibility === 'summary';
     const categorySummaries = [];
     const fullItems = [];
+    let totalWeightMg = 0;
+    let totalWornWeightMg = 0;
+    let totalConsumableWeightMg = 0;
+    let totalItemCount = 0;
 
     list.categoryIds.forEach((categoryId) => {
         const category = library.getCategoryById(categoryId);
@@ -127,6 +131,7 @@ function buildMemberSharedContent(library, list, visibility) {
 
         let categoryWeightMg = 0;
         let categoryItemCount = 0;
+        const categoryItems = [];
 
         category.categoryItems.forEach((categoryItem) => {
             const item = library.getItemById(categoryItem.itemId);
@@ -134,40 +139,63 @@ function buildMemberSharedContent(library, list, visibility) {
             const weightMg = item.weight * categoryItem.qty;
             categoryWeightMg += weightMg;
             categoryItemCount += 1;
+            totalWeightMg += weightMg;
+            totalItemCount += 1;
+            if (categoryItem.worn) {
+                totalWornWeightMg += item.weight;
+            }
+            if (categoryItem.consumable) {
+                totalConsumableWeightMg += weightMg;
+            }
+
+            const sharedItem = {
+                itemId: item.id,
+                categoryId: category.id,
+                categoryName: category.name,
+                name: item.name,
+                qty: categoryItem.qty,
+                weightMg,
+                group: !!categoryItem.group,
+            };
 
             if (!isSummary) {
-                fullItems.push({
-                    itemId: item.id,
-                    categoryId: category.id,
-                    categoryName: category.name,
-                    name: item.name,
-                    qty: categoryItem.qty,
-                    weightMg,
-                    group: !!categoryItem.group,
-                });
+                categoryItems.push(sharedItem);
+                fullItems.push(sharedItem);
             }
         });
 
-        if (isSummary) {
-            categorySummaries.push({
-                categoryId: category.id,
-                categoryName: category.name,
-                itemCount: categoryItemCount,
-                totalWeightMg: categoryWeightMg,
-            });
-        }
+        categorySummaries.push({
+            categoryId: category.id,
+            categoryName: category.name,
+            categoryColor: category.displayColor || null,
+            itemCount: categoryItemCount,
+            totalWeightMg: categoryWeightMg,
+            items: categoryItems.sort((a, b) => b.weightMg - a.weightMg),
+        });
     });
+
+    const sortedCategories = categorySummaries.sort((a, b) => b.totalWeightMg - a.totalWeightMg);
+    const totals = {
+        totalWeightMg,
+        totalWornWeightMg,
+        totalConsumableWeightMg,
+        totalBaseWeightMg: totalWeightMg - (totalWornWeightMg + totalConsumableWeightMg),
+        totalItemCount,
+    };
 
     if (isSummary) {
         return {
             mode: 'summary',
-            categories: categorySummaries.sort((a, b) => b.totalWeightMg - a.totalWeightMg),
+            categories: sortedCategories,
+            totals,
         };
     }
 
     return {
         mode: 'full',
+        categories: sortedCategories,
         items: fullItems.sort((a, b) => b.weightMg - a.weightMg),
+        totals,
     };
 }
 
