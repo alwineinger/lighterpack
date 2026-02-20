@@ -57,16 +57,20 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-
-        &:hover {
-            cursor: pointer;
-            text-decoration: underline;
-        }
+        cursor: pointer;
     }
 
     .lpRemove {
         flex: 0 0 8px;
         margin-bottom: 0;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .lpLibraryList {
+        .lpListName:hover {
+            text-decoration: underline;
+        }
     }
 }
 
@@ -161,8 +165,8 @@ export default {
     methods: {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
-            if (this.mobileLists) {
-                router.push('/');
+            if (this.mobileLists || this.$route.path === '/lists') {
+                this.$router.push('/');
             }
         },
         newList() {

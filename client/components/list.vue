@@ -63,7 +63,7 @@
                 <strong>Note:</strong> Your data is being saved to your local computer. In order to share your lists please register an account.
             </p>
         </div>
-        <list-summary v-if="!isListNew" :list="list" />
+        <list-summary v-if="!isListNew" class="lpListSummaryMain" :list="list" />
 
 
         <div style="clear: both;" />

@@ -1,7 +1,14 @@
 <style lang="scss">
 
-#itemImageDialog {
-    width: 640px;
+#lpImageDialog {
+    max-width: min(640px, 100%);
+
+    img {
+        display: block;
+        height: auto;
+        max-height: 70vh;
+        max-width: 100%;
+    }
 
     .imageUploadDescription {
         margin-bottom: 19px;

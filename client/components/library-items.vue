@@ -8,7 +8,9 @@
 
 #library {
     flex: 1 0 25vh;
+    margin: 0;
     overflow-y: scroll;
+    padding: 0;
 }
 
 #libraryContainer.lpMobileGearView {
@@ -59,7 +61,9 @@
 }
 
 .lpLibrarySelect {
+    align-self: start;
     display: inline-flex;
+    grid-area: select;
     margin-right: 6px;
 }
 
@@ -68,12 +72,19 @@
 }
 
 .lpLibraryItem {
+    align-items: center;
     border-top: 1px dotted #999;
+    column-gap: 8px;
+    display: grid;
+    grid-template-areas:
+        "select name weight actions"
+        "select description description actions";
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     list-style: none;
     margin: 0 10px 5px;
-    min-height: 43px;
+    min-height: 54px;
     overflow: hidden;
-    padding: 5px 5px 0 15px;
+    padding: 8px 8px 8px 10px;
     position: relative;
 
     &:first-child {
@@ -92,38 +103,46 @@
     }
 
     .lpName {
-        float: left;
+        grid-area: name;
         margin: 0;
-        max-width: 190px;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .lpWeight {
-        float: right;
+        grid-area: weight;
+        justify-self: end;
+        white-space: nowrap;
         width: auto;
     }
 
     .lpDescription {
-        clear: both;
         color: #ccc;
         display: block;
+        grid-area: description;
         overflow: hidden;
         text-overflow: ellipsis;
-        width: 235px;
+        white-space: nowrap;
+    }
+
+    .lpLibraryActions {
+        align-items: center;
+        display: inline-flex;
+        gap: 8px;
+        grid-area: actions;
+        justify-self: end;
+    }
+
+    .lpHandle,
+    .lpRemove,
+    .lpAdd {
+        position: static;
     }
 
     .lpHandle {
-        height: 80px;
-        left: 0;
-        position: absolute;
-        top: 5px;
-    }
-
-    .lpRemove {
-        bottom: 0;
-        position: absolute;
-        right: 14px;
+        align-self: stretch;
+        height: auto;
     }
 
     #library.lpSearching & {
@@ -138,27 +157,67 @@
         background: #666;
         color: #fff;
         padding: 10px;
-        width: 235px;
+        width: auto;
     }
 }
 
 .lpLibraryItem.isMobileGear {
+    box-sizing: border-box;
+    grid-template-areas:
+        "name weight"
+        "description description"
+        "actions actions";
+    grid-template-columns: minmax(0, 1fr) auto;
     margin: 0 0 10px;
     padding: 10px;
     width: 100%;
-    box-sizing: border-box;
 }
 
 .lpLibraryItem.isMobileGear .lpName,
 .lpLibraryItem.isMobileGear .lpDescription {
-    float: none;
     max-width: none;
+    white-space: normal;
     width: auto;
 }
 
 .lpLibraryItem.isMobileGear .lpWeight {
-    float: none;
     margin-top: 2px;
+}
+
+.lpLibraryItem.isMobileGear .lpRemove,
+.lpLibraryItem.isMobileGear .lpHandle,
+.lpLibraryItem.isMobileGear .lpLibraryActions {
+    justify-self: start;
+}
+
+.lpTrashCanIcon {
+    background: none;
+    display: inline-block;
+    height: 10px;
+    position: relative;
+    top: 0;
+    width: 8px;
+
+    &::before {
+        border: 1px solid #fff;
+        border-top: 0;
+        bottom: 0;
+        content: '';
+        left: 1px;
+        position: absolute;
+        right: 1px;
+        top: 3px;
+    }
+
+    &::after {
+        border: 1px solid #fff;
+        border-radius: 1px;
+        content: '';
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
 }
 
 @media (max-width: 900px) {
@@ -171,8 +230,14 @@
     }
 
     .lpLibraryItem {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
         margin: 0 0 8px;
-        padding-left: 10px;
+        padding: 10px;
+
+        .lpDescription {
+            white-space: normal;
+        }
     }
 }
 </style>
@@ -182,22 +247,22 @@
         <h2>Gear</h2>
         <div id="libraryToolbar">
             <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
-            <div v-if="!mobileGear" class="lpBulkAddBar">
+            <div v-if="supportsMultiSelect" class="lpBulkAddBar">
                 <label class="lpBulkToggle">
-                    <input type="checkbox" v-model="bulkSelectEnabled">
+                    <input v-model="bulkSelectEnabled" type="checkbox">
                     Select multiple
                 </label>
+                <select v-model="bulkCategoryId">
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.name || 'New category' }}
+                    </option>
+                </select>
                 <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="selectAllVisible">
                     Select all
                 </button>
                 <button v-if="bulkSelectEnabled" class="lpButton lpSmall" type="button" @click="clearSelection">
                     Clear
                 </button>
-                <select v-if="bulkSelectEnabled" v-model="bulkCategoryId">
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
-                        {{ category.name || 'New category' }}
-                    </option>
-                </select>
                 <button
                     v-if="bulkSelectEnabled"
                     class="lpButton lpSmall"
@@ -214,23 +279,15 @@
                         {{ category.name || 'New category' }}
                     </option>
                 </select>
-                <button
-                    class="lpButton lpSmall"
-                    type="button"
-                    :disabled="filteredItems.length === 0"
-                    @click="addAllVisibleToCategory"
-                >
-                    Add all visible ({{ filteredItems.length }})
-                </button>
             </div>
         </div>
         <ul id="library">
-            <li v-for="item in filteredItems" class="lpLibraryItem" :class="{isMobileGear: mobileGear}" :data-item-id="item.id">
+            <li v-for="item in filteredItems" :key="item.id" class="lpLibraryItem" :class="{isMobileGear: mobileGear}" :data-item-id="item.id">
                 <label v-if="!mobileGear && bulkSelectEnabled" class="lpLibrarySelect">
                     <input
+                        v-model="selectedItemIds"
                         type="checkbox"
                         :value="item.id"
-                        v-model="selectedItemIds"
                         :disabled="item.inCurrentList"
                     >
                 </label>
@@ -243,8 +300,16 @@
                 <span class="lpDescription">
                     {{ item.description }}
                 </span>
-                <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpSprite lpSpriteRemove" /></a>
-                <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
+                <div class="lpLibraryActions">
+                    <a
+                        v-if="!item.inCurrentList"
+                        class="lpAdd"
+                        title="Add this item to your list"
+                        @click="addItemToCategory(item.id)"
+                    ><i class="lpSprite lpSpriteAdd" /></a>
+                    <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpTrashCanIcon" /></a>
+                    <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
+                </div>
             </li>
         </ul>
     </section>
@@ -252,6 +317,7 @@
 
 <script>
 import utilsMixin from '../mixins/utils-mixin.js';
+import { getResponsiveState, subscribeResponsiveState } from '../utils/responsive';
 
 const dragula = require('dragula');
 
@@ -272,7 +338,8 @@ export default {
             bulkSelectEnabled: false,
             selectedItemIds: [],
             bulkCategoryId: null,
-            isMobile: false,
+            responsive: getResponsiveState(),
+            unsubscribeResponsive: null,
         };
     },
     computed: {
@@ -284,7 +351,7 @@ export default {
             let item;
             let filteredItems = [];
             if (!this.searchText) {
-                filteredItems = this.library.items.map(item => Vue.util.extend({}, item));
+                filteredItems = this.library.items.map((item) => Vue.util.extend({}, item));
             } else {
                 const lowerCaseSearchText = this.searchText.toLowerCase();
 
@@ -306,7 +373,7 @@ export default {
             }
 
             if (this.mobileGear) {
-                return filteredItems.filter(listItem => !listItem.inCurrentList);
+                return filteredItems.filter((listItem) => !listItem.inCurrentList);
             }
 
             return filteredItems;
@@ -315,7 +382,10 @@ export default {
             return this.library.getListById(this.library.defaultListId);
         },
         categories() {
-            return this.list.categoryIds.map(id => this.library.getCategoryById(id));
+            return this.list.categoryIds.map((id) => this.library.getCategoryById(id));
+        },
+        supportsMultiSelect() {
+            return !this.mobileGear && !this.responsive.isNarrowViewport;
         },
     },
     watch: {
@@ -327,23 +397,32 @@ export default {
             });
             this.ensureBulkCategory();
         },
+        'responsive.isCompactViewport': function () {
+            this.updateBulkSelectForViewport();
+        },
+        'responsive.isCoarsePointer': function () {
+            this.updateBulkSelectForViewport();
+        },
     },
     mounted() {
         if (!this.mobileGear) {
             this.handleItemDrag();
         }
-        this.updateIsMobile();
+        this.updateBulkSelectForViewport();
         this.ensureBulkCategory();
-        window.addEventListener('resize', this.updateIsMobile);
+        this.unsubscribeResponsive = subscribeResponsiveState();
     },
     beforeDestroy() {
-        window.removeEventListener('resize', this.updateIsMobile);
+        if (this.unsubscribeResponsive) {
+            this.unsubscribeResponsive();
+            this.unsubscribeResponsive = null;
+        }
     },
     methods: {
-        updateIsMobile() {
-            this.isMobile = window.matchMedia('(max-width: 900px)').matches;
-            if (this.isMobile && !this.mobileGear && !this.bulkSelectEnabled) {
-                this.bulkSelectEnabled = true;
+        updateBulkSelectForViewport() {
+            if (!this.supportsMultiSelect) {
+                this.bulkSelectEnabled = false;
+                this.clearSelection();
             }
         },
         ensureBulkCategory() {
@@ -353,8 +432,8 @@ export default {
         },
         selectAllVisible() {
             const itemsToSelect = this.filteredItems
-                .filter(item => !item.inCurrentList)
-                .map(item => item.id);
+                .filter((item) => !item.inCurrentList)
+                .map((item) => item.id);
             this.selectedItemIds = itemsToSelect;
         },
         clearSelection() {
@@ -391,6 +470,23 @@ export default {
             this.filteredItems.forEach((listItem) => {
                 this.$store.commit('addItemToCategory', { itemId: listItem.id, categoryId: dropCategory.id, dropIndex });
                 dropIndex += 1;
+            });
+        },
+        addItemToCategory(itemId) {
+            const dropCategory = this.library.getCategoryById(this.bulkCategoryId) || this.categories[0];
+            if (!dropCategory) {
+                return;
+            }
+
+            const currentListItemIds = new Set(this.library.getItemsInCurrentList());
+            if (currentListItemIds.has(itemId)) {
+                return;
+            }
+
+            this.$store.commit('addItemToCategory', {
+                itemId,
+                categoryId: dropCategory.id,
+                dropIndex: dropCategory.categoryItems.length,
             });
         },
         handleItemDrag() {

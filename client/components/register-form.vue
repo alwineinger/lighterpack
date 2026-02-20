@@ -53,14 +53,14 @@ export default {
     methods: {
         loadLocal() {
             if (this.isLocalSaving) {
-                router.push('/');
+                this.$router.push('/');
                 return;
             }
             const library = new Library();
             this.$store.commit('loadLibraryData', JSON.stringify(library.save()));
             this.$store.commit('setSaveType', 'local');
             this.$store.commit('setLoggedIn', false);
-            router.push('/');
+            this.$router.push('/');
         },
         submit() {
             this.errors = [];
@@ -123,7 +123,7 @@ export default {
                         delete localStorage.library;
                     }
                     this.saving = false;
-                    router.push('/');
+                    this.$router.push('/');
                 })
                 .catch((err) => {
                     this.saving = false;

@@ -1,9 +1,9 @@
 <style lang="scss">
 
 #importValidate {
-    height: 500px;
-    overflow-y: scroll;
-    width: 650px;
+    max-height: min(500px, 70vh);
+    max-width: min(650px, 100%);
+    overflow-y: auto;
 
     .lpButton {
         margin-bottom: 30px;
@@ -110,7 +110,6 @@ export default {
             const strDelimiter = ',';
             const arrData = [[]];
             let arrMatches = null;
-
 
             const objPattern = new RegExp(
                 (

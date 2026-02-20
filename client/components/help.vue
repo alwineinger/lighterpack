@@ -1,7 +1,7 @@
 <style lang="scss">
 
 #help {
-    width: 800px;
+    max-width: min(800px, 100%);
 }
 
 </style>

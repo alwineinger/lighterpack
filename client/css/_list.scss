@@ -105,7 +105,7 @@ input.lpCategoryName { /* specificity */
     }
 
     .lpImageCell {
-        flex: 0 0 90px;
+        flex: 0 1 clamp(64px, 10vw, 90px);
 
         .lpItemImage {
             cursor: pointer;
@@ -116,43 +116,50 @@ input.lpCategoryName { /* specificity */
     }
 
     .lpName {
-        flex: 1 1 150px;
+        flex: 2 1 clamp(140px, 20vw, 260px);
         margin-right: 4px;
-        min-width: 50px;
+        min-width: 0;
     }
 
     .lpDescription {
-        flex: 2 0 200px;
+        flex: 3 1 clamp(160px, 25vw, 340px);
         margin-right: 4px;
-        min-width: 100px;
+        min-width: 0;
     }
 
     .lpActionsCell {
         align-self: center;
-        flex: 0 0 130px;
+        flex: 0 1 clamp(96px, 14vw, 130px);
+        min-width: 0;
     }
 
     .lpWeightCell {
-        flex: 0 0 110px;
+        flex: 0 1 clamp(94px, 12vw, 110px);
+        min-width: 0;
 
         .lpWeight {
+            max-width: 100%;
             width: 50px;
         }
     }
 
     .lpPriceCell {
-        flex: 0 0 66px;
+        flex: 0 1 clamp(60px, 8vw, 72px);
         margin-right: 4px;
+        min-width: 0;
 
         .lpPrice {
+            max-width: 100%;
             width: 66px;
         }
     }
 
     .lpQtyCell {
-        flex: 0 0 60px;
+        flex: 0 1 clamp(56px, 8vw, 66px);
+        min-width: 0;
 
         .lpQty {
+            max-width: 100%;
             width: 39px;
         }
     }
@@ -172,10 +179,20 @@ input.lpCategoryName { /* specificity */
 }
 
 .lpItemsHeader {
-    align-items: flex-end;
+    align-items: center;
     border-bottom: 1px solid #aaa;
     border-top: none;
-    height: 31px;
+    color: #555;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    min-height: 36px;
+    text-transform: uppercase;
+
+    .lpCategoryName {
+        letter-spacing: normal;
+        text-transform: none;
+    }
 }
 
 .lpItemsFooter {
@@ -220,6 +237,14 @@ input.lpCategoryName { /* specificity */
     }
 }
 
+.lpName,
+.lpDescription,
+.lpWeight,
+.lpPrice,
+.lpQty {
+    min-width: 0;
+}
+
 @media only screen and (max-width: 820px) {
     #main {
         max-width: 100%;
@@ -244,7 +269,29 @@ input.lpCategoryName { /* specificity */
     }
 
     .lpItemsHeader {
-        display: none;
+        border: 1px solid #d2d2d2;
+        border-radius: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 10px;
+
+        .lpHandleCell,
+        .lpPriceCell,
+        .lpWeightCell,
+        .lpQtyCell {
+            display: none;
+        }
+
+        .lpCategoryName {
+            flex: 1 1 100%;
+        }
+
+        .lpRemoveCell {
+            align-self: center;
+            flex: 0 0 auto;
+        }
     }
 
     .lpItem,
@@ -302,6 +349,7 @@ input.lpCategoryName { /* specificity */
         .lpWeight,
         .lpQty,
         .lpPrice {
+            font-size: 16px;
             min-height: 38px;
         }
     }
@@ -313,4 +361,5 @@ input.lpCategoryName { /* specificity */
     input.lpCategoryName {
         flex-basis: 100%;
     }
+
 }
