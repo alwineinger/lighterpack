@@ -87,20 +87,70 @@ function getUserById(userId, callback) {
     });
 }
 
-function getSharedListForMember(member, callback) {
-    if (!member || !member.userId || !member.listId) {
+function normalizeVisibility(visibility) {
+    return visibility === 'summary' ? 'summary' : 'full';
+}
+
+function normalizeMemberSharedLists(member) {
+    const seen = {};
+    const normalized = [];
+    const sourceLists = Array.isArray(member && member.sharedLists) && member.sharedLists.length
+        ? member.sharedLists
+        : [{
+            listId: member && member.listId,
+            visibility: member && member.visibility,
+        }];
+
+    sourceLists.forEach((sharedList) => {
+        const listId = parseInt(sharedList && sharedList.listId, 10);
+        if (Number.isNaN(listId) || seen[listId]) {
+            return;
+        }
+        seen[listId] = true;
+        normalized.push({
+            listId,
+            visibility: normalizeVisibility(sharedList && sharedList.visibility),
+        });
+    });
+
+    return normalized;
+}
+
+function withLegacyMemberSharedFields(member) {
+    const sharedLists = normalizeMemberSharedLists(member);
+    const primary = sharedLists[0] || null;
+    return {
+        ...member,
+        sharedLists,
+        listId: primary ? primary.listId : null,
+        visibility: primary ? primary.visibility : 'full',
+    };
+}
+
+function getSharedListsForMember(member, callback) {
+    if (!member || !member.userId) {
         return callback(null, null);
     }
     getUserById(member.userId, (err, memberUser) => {
         if (err || !memberUser) {
             return callback(err, null);
         }
-        const library = loadLibraryForUser(memberUser);
-        const list = library.getListById(member.listId);
-        if (!list) {
-            return callback(null, null);
-        }
-        return callback(null, { memberUser, library, list });
+        const library = new Library();
+        library.load(memberUser.library || new Library().save());
+        const sharedLists = normalizeMemberSharedLists(member)
+            .map((selection) => {
+                const list = library.getListById(selection.listId);
+                if (!list) {
+                    return null;
+                }
+                return {
+                    list,
+                    listId: selection.listId,
+                    visibility: selection.visibility,
+                };
+            })
+            .filter((selection) => !!selection);
+        return callback(null, { memberUser, library, sharedLists });
     });
 }
 
@@ -342,6 +392,10 @@ router.post('/api/v1/trips', (req, res) => {
                 username: user.username,
                 email: trimLower(user.email),
                 role: 'owner',
+                sharedLists: [{
+                    listId: user.library && user.library.defaultListId,
+                    visibility: 'full',
+                }],
                 listId: user.library && user.library.defaultListId,
                 visibility: 'full',
             }],
@@ -425,8 +479,12 @@ router.post('/api/v1/trips/:tripId/accept', (req, res) => {
                 username: user.username,
                 email: trimLower(user.email),
                 role: invitation.role,
+                sharedLists: [{
+                    listId,
+                    visibility: normalizeVisibility(req.body.visibility),
+                }],
                 listId,
-                visibility: req.body.visibility === 'summary' ? 'summary' : 'full',
+                visibility: normalizeVisibility(req.body.visibility),
             });
             trip.invitations = trip.invitations.filter((invite) => invite.token !== inviteToken);
             trip.updatedAt = new Date().toISOString();
@@ -465,20 +523,43 @@ router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
                 return apiError(res, 400, 'INVALID_LIST', 'Selected list does not exist.');
             }
 
-            const visibility = req.body.visibility === 'summary' ? 'summary' : 'full';
+            const visibility = normalizeVisibility(req.body.visibility);
+            const remove = req.body.remove === true;
+            const previousListId = parseInt(req.body.previousListId, 10);
+            const sharedLists = normalizeMemberSharedLists(trip.members[memberIndex]);
+            const targetListId = Number.isNaN(previousListId) ? listId : previousListId;
+            const existingIndex = sharedLists.findIndex((sharedList) => sharedList.listId === targetListId);
+            if (remove) {
+                if (existingIndex > -1) {
+                    sharedLists.splice(existingIndex, 1);
+                }
+            } else if (existingIndex > -1) {
+                sharedLists[existingIndex] = {
+                    ...sharedLists[existingIndex],
+                    listId,
+                    visibility,
+                };
+            } else {
+                sharedLists.push({ listId, visibility });
+            }
 
-            trip.members[memberIndex] = {
+            trip.members[memberIndex] = withLegacyMemberSharedFields({
                 ...trip.members[memberIndex],
-                listId,
-                visibility,
-            };
+                sharedLists,
+            });
 
             trip.updatedAt = new Date().toISOString();
             db.trips.save(trip, (saveErr) => {
                 if (saveErr) {
                     return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update shared list.');
                 }
-                return res.status(200).json({ data: { listId, visibility } });
+                return res.status(200).json({
+                    data: {
+                        listId,
+                        visibility,
+                        sharedLists,
+                    },
+                });
             });
         });
     });
@@ -510,7 +591,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                         id: trip._id.toString(),
                         name: trip.name,
                         canManage: canManageTrip(trip, user),
-                        currentUserMember: (trip.members || []).find((member) => member.userId === user._id.toString()) || null,
+                        currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
                         pendingInvitation,
                         members,
                         totalUnit: 'oz',
@@ -520,37 +601,50 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
             }
 
             trip.members.forEach((member) => {
-                getSharedListForMember(member, (memberErr, payload) => {
+                getSharedListsForMember(member, (memberErr, payload) => {
                     pending -= 1;
                     if (!memberErr && payload) {
-                        const { library, list } = payload;
-                        list.calculateTotals();
+                        const { library, sharedLists } = payload;
+                        const hydratedSharedLists = sharedLists.map((selection) => {
+                            selection.list.calculateTotals();
+                            return {
+                                listId: selection.listId,
+                                visibility: selection.visibility,
+                                listName: selection.list.name,
+                                totalWeight: selection.list.totalWeight,
+                                sharedContent: buildMemberSharedContent(library, selection.list, selection.visibility),
+                            };
+                        });
+
                         members.push({
                             userId: member.userId,
                             username: member.username,
                             email: member.email,
                             role: member.role,
-                            visibility: member.visibility,
-                            listName: list.name,
-                            totalWeight: list.totalWeight,
-                            sharedContent: buildMemberSharedContent(library, list, member.visibility),
+                            sharedLists: hydratedSharedLists,
                         });
 
                         const groupItems = [];
-                        list.categoryIds.forEach((categoryId) => {
-                            const category = library.getCategoryById(categoryId);
-                            if (!category) return;
-                            category.categoryItems.forEach((categoryItem) => {
-                                if (!categoryItem.group) return;
-                                const item = library.getItemById(categoryItem.itemId);
-                                if (!item) return;
-                                groupItems.push({
-                                    itemId: item.id,
-                                    categoryId: category.id,
-                                    name: item.name,
-                                    categoryName: category.name,
-                                    qty: categoryItem.qty,
-                                    weightMg: item.weight * categoryItem.qty,
+                        hydratedSharedLists.forEach((sharedList) => {
+                            const list = library.getListById(sharedList.listId);
+                            if (!list) {
+                                return;
+                            }
+                            list.categoryIds.forEach((categoryId) => {
+                                const category = library.getCategoryById(categoryId);
+                                if (!category) return;
+                                category.categoryItems.forEach((categoryItem) => {
+                                    if (!categoryItem.group) return;
+                                    const item = library.getItemById(categoryItem.itemId);
+                                    if (!item) return;
+                                    groupItems.push({
+                                        itemId: item.id,
+                                        categoryId: category.id,
+                                        name: item.name,
+                                        categoryName: category.name,
+                                        qty: categoryItem.qty,
+                                        weightMg: item.weight * categoryItem.qty,
+                                    });
                                 });
                             });
                         });
@@ -570,7 +664,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                                 id: trip._id.toString(),
                                 name: trip.name,
                                 canManage: canManageTrip(trip, user),
-                                currentUserMember: (trip.members || []).find((member) => member.userId === user._id.toString()) || null,
+                                currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
                                 pendingInvitation,
                                 members,
                                 totalUnit: 'oz',
