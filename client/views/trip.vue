@@ -7,6 +7,37 @@
             <h1>{{ trip.name }}</h1>
         </div>
 
+        <div class="lpTripNotes">
+            <div class="lpTripSectionHeader">
+                <h2>Trip Notes</h2>
+                <button v-if="canEditTripNotes && !isEditingTripNotes" class="lpButton lpSmall" @click="startEditingTripNotes">
+                    Edit notes
+                </button>
+            </div>
+            <div v-if="isEditingTripNotes">
+                <p>
+                    <a href="https://guides.github.com/features/mastering-markdown/" target="_blank" class="lpHref">Markdown</a> supported.
+                </p>
+                <textarea
+                    v-model="tripNotesDraft"
+                    class="lpTripNotesInput"
+                    placeholder="Add trip notes, reminders, or itinerary details"
+                />
+                <div class="lpTripNotesActions">
+                    <button class="lpButton lpSmall" @click="saveTripNotes">
+                        Save notes
+                    </button>
+                    <button class="lpButton lpSmall" @click="cancelEditingTripNotes">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            <div v-else-if="hasTripNotes" class="lpTripNotesContent" v-html="renderedTripNotes" />
+            <p v-else class="lpTripNotesEmpty">
+                No trip notes yet.
+            </p>
+        </div>
+
         <h2>Group Gear</h2>
         <div class="lpListSummary lpTripSummary">
             <div class="lpChartContainer">
@@ -188,9 +219,11 @@
 
 <script>
 import {
-    acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList,
+    acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripNotes,
 } from '../api/mobile-api';
 import unitSelect from '../components/unit-select.vue';
+
+const markdown = require('markdown').markdown;
 
 const pies = require('../pies.js');
 const utilsMixin = require('../mixins/utils-mixin.js');
@@ -210,6 +243,8 @@ export default {
                 email: '',
                 role: 'editor',
             },
+            isEditingTripNotes: false,
+            tripNotesDraft: '',
         };
     },
     computed: {
@@ -271,6 +306,21 @@ export default {
                 const bName = (b.username || b.email || '').toLowerCase();
                 return aName.localeCompare(bName);
             });
+        },
+        canEditTripNotes() {
+            if (!this.trip || !this.trip.currentUserMember) {
+                return false;
+            }
+            return ['owner', 'editor'].indexOf(this.trip.currentUserMember.role) > -1;
+        },
+        hasTripNotes() {
+            return !!(this.trip && this.trip.notes && this.trip.notes.trim());
+        },
+        renderedTripNotes() {
+            if (!this.trip || !this.trip.notes) {
+                return '';
+            }
+            return markdown.toHTML(this.trip.notes);
         },
     },
     watch: {
@@ -357,6 +407,8 @@ export default {
         refresh() {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
+                this.tripNotesDraft = trip.notes || '';
+                this.isEditingTripNotes = false;
                 this.$nextTick(this.updateChart);
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
@@ -406,6 +458,27 @@ export default {
                 this.invite.email = '';
                 this.invite.role = 'editor';
                 this.refresh();
+            });
+        },
+        startEditingTripNotes() {
+            if (!this.trip) {
+                return;
+            }
+            this.tripNotesDraft = this.trip.notes || '';
+            this.isEditingTripNotes = true;
+        },
+        cancelEditingTripNotes() {
+            this.tripNotesDraft = this.trip && this.trip.notes ? this.trip.notes : '';
+            this.isEditingTripNotes = false;
+        },
+        saveTripNotes() {
+            if (!this.trip || !this.canEditTripNotes) {
+                return;
+            }
+            updateTripNotes(this.trip.id, this.tripNotesDraft).then((response) => {
+                this.trip.notes = response.notes || '';
+                this.tripNotesDraft = this.trip.notes;
+                this.isEditingTripNotes = false;
             });
         },
 
@@ -571,6 +644,40 @@ export default {
 
 .lpTripSummary {
     margin-bottom: 20px;
+}
+
+.lpTripNotes {
+    border: 1px solid #ccc;
+    margin: 12px 0 20px;
+    padding: 10px;
+}
+
+.lpTripNotesInput {
+    min-height: 120px;
+    width: 100%;
+}
+
+.lpTripNotesActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.lpTripNotesEmpty {
+    color: #666;
+    margin: 0;
+}
+
+.lpTripNotesContent {
+    overflow-wrap: anywhere;
+
+    :first-child {
+        margin-top: 0;
+    }
+
+    :last-child {
+        margin-bottom: 0;
+    }
 }
 
 .lpTripChartHint {

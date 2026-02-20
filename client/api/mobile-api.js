@@ -58,3 +58,10 @@ export function updateTripMemberList(tripId, payload) {
         body: JSON.stringify(payload),
     }).then((response) => response.data);
 }
+
+export function updateTripNotes(tripId, notes) {
+    return apiRequest(`/api/v1/trips/${tripId}/notes`, {
+        method: 'PUT',
+        body: JSON.stringify({ notes }),
+    }).then((response) => response.data);
+}
