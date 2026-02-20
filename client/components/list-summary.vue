@@ -11,6 +11,11 @@
     flex: 0 0 260px;
 }
 
+.lpChartToggle {
+    display: none;
+    margin-top: 10px;
+}
+
 .lpChart {
     display: block;
     max-width: 100%;
@@ -35,13 +40,17 @@
     }
 
     .lpChartContainer {
-        display: none;
+        margin-top: 10px;
     }
 
     .lpTotalsContainer {
         flex: 1 1 100%;
         max-width: 100%;
         width: 100%;
+    }
+
+    .lpChartToggle {
+        display: inline-block;
     }
 }
 
@@ -58,9 +67,6 @@
 
 <template>
     <div class="lpListSummary">
-        <div class="lpChartContainer">
-            <canvas class="lpChart" height="260" width="260" />
-        </div>
         <div class="lpTotalsContainer">
             <ul class="lpTotals lpTable lpDataTable">
                 <li class="lpRow lpHeader">
@@ -142,6 +148,12 @@
                     </span>
                 </li>
             </ul>
+            <button v-if="isNarrowViewport" type="button" class="lpChartToggle lpButton lpButtonOutline" @click="toggleChart">
+                {{ showChartOnNarrowViewport ? 'Hide chart' : 'Show chart' }}
+            </button>
+        </div>
+        <div v-if="shouldShowChart" class="lpChartContainer">
+            <canvas ref="chartCanvas" class="lpChart" height="260" width="260" />
         </div>
     </div>
 </template>
@@ -167,6 +179,8 @@ export default {
             chart: null,
             hoveredCategoryId: null,
             chartSize: 260,
+            isNarrowViewport: false,
+            showChartOnNarrowViewport: false,
         };
     },
     computed: {
@@ -180,6 +194,9 @@ export default {
                 return category;
             });
         },
+        shouldShowChart() {
+            return !this.isNarrowViewport || this.showChartOnNarrowViewport;
+        },
     },
     watch: {
         '$store.state.library.defaultListId': 'updateChart',
@@ -187,15 +204,35 @@ export default {
         'list.categoryIds': 'updateChart',
     },
     mounted() {
+        this.handleViewportChange();
         this.updateChart();
-        window.addEventListener('resize', this.updateChart);
+        window.addEventListener('resize', this.handleResize);
     },
     beforeDestroy() {
-        window.removeEventListener('resize', this.updateChart);
+        window.removeEventListener('resize', this.handleResize);
     },
     methods: {
+        handleResize() {
+            this.handleViewportChange();
+            this.updateChart();
+        },
+        handleViewportChange() {
+            this.isNarrowViewport = window.innerWidth <= 900;
+            if (!this.isNarrowViewport) {
+                this.showChartOnNarrowViewport = false;
+            }
+        },
+        toggleChart() {
+            this.showChartOnNarrowViewport = !this.showChartOnNarrowViewport;
+            if (this.showChartOnNarrowViewport) {
+                this.$nextTick(() => this.updateChart());
+            }
+        },
         updateChart(type) {
-            const canvas = this.$el.querySelector('.lpChart');
+            if (!this.shouldShowChart) {
+                return null;
+            }
+            const canvas = this.$refs.chartCanvas;
             if (canvas) {
                 const maxWidth = 260;
                 const minWidth = 180;
@@ -213,7 +250,7 @@ export default {
                 if (this.chart) {
                     this.chart.update({ processedData: chartData });
                 } else {
-                    this.chart = pies({ processedData: chartData, container: document.getElementsByClassName('lpChart')[0], hoverCallback: this.chartHover });
+                    this.chart = pies({ processedData: chartData, container: canvas, hoverCallback: this.chartHover });
                 }
             }
             return chartData;
