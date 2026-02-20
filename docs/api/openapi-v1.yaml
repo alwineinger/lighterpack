@@ -85,6 +85,18 @@ paths:
       responses:
         '200':
           description: Shared list updated
+  /api/v1/trips/{tripId}/name:
+    put:
+      summary: Rename a trip (owner only)
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trip name updated
 components:
   schemas:
     Error:
