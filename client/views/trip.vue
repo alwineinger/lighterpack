@@ -22,24 +22,6 @@
             </button>
         </div>
 
-        <div class="lpTripSectionHeader">
-            <h2>Shared lists</h2>
-            <div v-if="currentUserListChoices.length" class="lpTripListSelector">
-                <label for="trip-shared-list">Your shared list:</label>
-                <select id="trip-shared-list" :value="selectedSharedListId" @change="onSharedListChange">
-                    <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
-                        {{ list.name }}
-                    </option>
-                </select>
-            </div>
-        </div>
-        <ul>
-            <li v-for="member in trip.members" :key="member.userId || member.email">
-                <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
-                <span v-if="member.listName"> • {{ member.listName }} ({{ member.visibility }})</span>
-            </li>
-        </ul>
-
         <h2>Group Gear</h2>
         <div class="lpListSummary lpTripSummary">
             <div class="lpChartContainer">
@@ -70,6 +52,31 @@
                 </p>
             </div>
         </div>
+
+        <div class="lpTripSectionHeader">
+            <h2>Shared content</h2>
+        </div>
+        <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
+            <h3>{{ member.username || member.email }} — {{ member.listName || 'No shared list' }} ({{ member.visibility }})</h3>
+            <div v-if="member.sharedContent && member.sharedContent.mode === 'summary'">
+                <ul>
+                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId">
+                        {{ category.categoryName }}: {{ category.itemCount }} items — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    </li>
+                </ul>
+            </div>
+            <div v-else-if="member.sharedContent && member.sharedContent.items && member.sharedContent.items.length">
+                <ul>
+                    <li v-for="item in member.sharedContent.items" :key="item.itemId + '-' + item.categoryId">
+                        {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    </li>
+                </ul>
+            </div>
+            <p v-else>
+                No shared items yet.
+            </p>
+        </div>
+
         <div v-for="group in trip.groupGearByUser" :key="group.userKey" class="lpTripGroupPanel">
             <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}</h3>
             <ul>
@@ -78,6 +85,33 @@
                 </li>
             </ul>
         </div>
+
+        <div class="lpTripSectionHeader lpTripSharedListsSection">
+            <h2>Shared lists</h2>
+            <div v-if="currentUserListChoices.length" class="lpTripListSelector">
+                <label for="trip-shared-list">Your shared list:</label>
+                <select id="trip-shared-list" :value="selectedSharedListId" @change="onSharedListChange">
+                    <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
+                        {{ list.name }}
+                    </option>
+                </select>
+                <label for="trip-shared-visibility">Share level:</label>
+                <select id="trip-shared-visibility" :value="selectedVisibility" @change="onVisibilityChange">
+                    <option value="summary">
+                        Summary
+                    </option>
+                    <option value="full">
+                        All items
+                    </option>
+                </select>
+            </div>
+        </div>
+        <ul>
+            <li v-for="member in trip.members" :key="member.userId || member.email">
+                <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
+                <span v-if="member.listName"> • {{ member.listName }} ({{ member.visibility }})</span>
+            </li>
+        </ul>
     </div>
 </template>
 
@@ -106,6 +140,7 @@ export default {
                 role: 'editor',
             },
             selectedSharedListId: null,
+            selectedVisibility: 'full',
         };
     },
     computed: {
@@ -129,6 +164,13 @@ export default {
                 };
             });
         },
+        sortedMembers() {
+            return ((this.trip && this.trip.members) || []).slice().sort((a, b) => {
+                const aName = (a.username || a.email || '').toLowerCase();
+                const bName = (b.username || b.email || '').toLowerCase();
+                return aName.localeCompare(bName);
+            });
+        },
     },
     watch: {
         sortedGroups: {
@@ -136,6 +178,9 @@ export default {
                 this.$nextTick(this.updateChart);
             },
             deep: true,
+        },
+        '$store.state.syncToken': function () {
+            this.refresh();
         },
     },
     mounted() {
@@ -150,6 +195,7 @@ export default {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
                 this.selectedSharedListId = trip.currentUserMember ? trip.currentUserMember.listId : null;
+                this.selectedVisibility = trip.currentUserMember ? trip.currentUserMember.visibility : 'full';
                 this.$nextTick(this.updateChart);
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
@@ -202,15 +248,34 @@ export default {
             });
         },
 
+        updateSharedSettings(payload) {
+            if (!this.trip) {
+                return Promise.resolve();
+            }
+            return updateTripMemberList(this.trip.id, payload).then(() => {
+                this.selectedSharedListId = payload.listId;
+                this.selectedVisibility = payload.visibility;
+                this.refresh();
+            });
+        },
         onSharedListChange(event) {
             const listId = parseInt(event.target.value, 10);
             if (Number.isNaN(listId) || listId === this.selectedSharedListId || !this.trip) {
                 return;
             }
-
-            updateTripMemberList(this.trip.id, { listId }).then(() => {
-                this.selectedSharedListId = listId;
-                this.refresh();
+            this.updateSharedSettings({
+                listId,
+                visibility: this.selectedVisibility,
+            });
+        },
+        onVisibilityChange(event) {
+            const visibility = event.target.value === 'summary' ? 'summary' : 'full';
+            if (visibility === this.selectedVisibility || !this.trip || !this.selectedSharedListId) {
+                return;
+            }
+            this.updateSharedSettings({
+                listId: this.selectedSharedListId,
+                visibility,
             });
         },
 
@@ -321,9 +386,14 @@ export default {
     justify-content: space-between;
 }
 
+.lpTripSharedListsSection {
+    margin-top: 24px;
+}
+
 .lpTripListSelector {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 </style>

@@ -116,6 +116,61 @@ function saveLibraryForUser(user, library, callback) {
     db.users.save(user, callback);
 }
 
+function buildMemberSharedContent(library, list, visibility) {
+    const isSummary = visibility === 'summary';
+    const categorySummaries = [];
+    const fullItems = [];
+
+    list.categoryIds.forEach((categoryId) => {
+        const category = library.getCategoryById(categoryId);
+        if (!category) return;
+
+        let categoryWeightMg = 0;
+        let categoryItemCount = 0;
+
+        category.categoryItems.forEach((categoryItem) => {
+            const item = library.getItemById(categoryItem.itemId);
+            if (!item) return;
+            const weightMg = item.weight * categoryItem.qty;
+            categoryWeightMg += weightMg;
+            categoryItemCount += 1;
+
+            if (!isSummary) {
+                fullItems.push({
+                    itemId: item.id,
+                    categoryId: category.id,
+                    categoryName: category.name,
+                    name: item.name,
+                    qty: categoryItem.qty,
+                    weightMg,
+                    group: !!categoryItem.group,
+                });
+            }
+        });
+
+        if (isSummary) {
+            categorySummaries.push({
+                categoryId: category.id,
+                categoryName: category.name,
+                itemCount: categoryItemCount,
+                totalWeightMg: categoryWeightMg,
+            });
+        }
+    });
+
+    if (isSummary) {
+        return {
+            mode: 'summary',
+            categories: categorySummaries.sort((a, b) => b.totalWeightMg - a.totalWeightMg),
+        };
+    }
+
+    return {
+        mode: 'full',
+        items: fullItems.sort((a, b) => b.weightMg - a.weightMg),
+    };
+}
+
 router.get('/api/v1/session', (req, res) => {
     withAuthenticatedUser(req, res, (user) => res.status(200).json({
         data: {
@@ -382,9 +437,12 @@ router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
                 return apiError(res, 400, 'INVALID_LIST', 'Selected list does not exist.');
             }
 
+            const visibility = req.body.visibility === 'summary' ? 'summary' : 'full';
+
             trip.members[memberIndex] = {
                 ...trip.members[memberIndex],
                 listId,
+                visibility,
             };
 
             trip.updatedAt = new Date().toISOString();
@@ -392,7 +450,7 @@ router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
                 if (saveErr) {
                     return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update shared list.');
                 }
-                return res.status(200).json({ data: { listId } });
+                return res.status(200).json({ data: { listId, visibility } });
             });
         });
     });
@@ -447,6 +505,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                             visibility: member.visibility,
                             listName: list.name,
                             totalWeight: list.totalWeight,
+                            sharedContent: buildMemberSharedContent(library, list, member.visibility),
                         });
 
                         const groupItems = [];
