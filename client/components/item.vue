@@ -102,7 +102,7 @@
             </span>
         </span>
         <span class="lpRemoveCell">
-            <a class="lpRemove lpRemoveItem" title="Remove this item" @click="removeItem"><i class="lpSprite lpSpriteRemove" /></a>
+            <a class="lpRemove lpRemoveItem" title="Remove this item" @click.stop.prevent="removeItem"><i class="lpSprite lpSpriteRemove" /></a>
         </span>
     </li>
 </template>
@@ -344,7 +344,8 @@ export default {
 
             this.saveItem();
         },
-        removeItem() {
+        removeItem(evt) {
+            evt.stopImmediatePropagation();
             this.$store.commit('removeItemFromCategory', { itemId: this.item.id, category: this.category });
         },
     },
