@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <div v-for="group in trip.groupGearByUser" :key="group.userKey" class="lpTripGroupPanel">
+        <div v-for="group in groupGearByUserView" :key="group.userKey" class="lpTripGroupPanel">
             <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}</h3>
             <ul>
                 <li v-for="item in group.items" :key="item.itemId + '-' + item.categoryId">
@@ -218,7 +218,27 @@ export default {
             return this.$store.state.library;
         },
         sortedGroups() {
-            return ((this.trip && this.trip.groupGearByUser) || []).slice().sort((a, b) => b.totalWeightMg - a.totalWeightMg);
+            return this.groupGearByUserView.slice().sort((a, b) => b.totalWeightMg - a.totalWeightMg);
+        },
+        groupGearByUserView() {
+            if (!this.trip) {
+                return [];
+            }
+
+            const groups = (this.trip.groupGearByUser || []).slice();
+            const localGroup = this.buildCurrentUserLocalGroup();
+            if (!localGroup) {
+                return groups;
+            }
+
+            const existingIndex = groups.findIndex((group) => group.userKey === localGroup.userKey);
+            if (existingIndex === -1) {
+                groups.push(localGroup);
+            } else {
+                groups.splice(existingIndex, 1, localGroup);
+            }
+
+            return groups;
         },
         totalGroupWeightMg() {
             return this.sortedGroups.reduce((sum, group) => sum + group.totalWeightMg, 0);
@@ -271,6 +291,62 @@ export default {
         window.removeEventListener('resize', this.updateChart);
     },
     methods: {
+        buildCurrentUserLocalGroup() {
+            if (!this.trip || !this.trip.currentUserMember || !this.trip.currentUserMember.userId) {
+                return null;
+            }
+
+            const library = this.$store.state.library;
+            const sharedLists = this.currentUserSharedLists;
+            if (!library || !sharedLists.length) {
+                return null;
+            }
+
+            const groupItems = [];
+            sharedLists.forEach((sharedList) => {
+                const list = library.getListById(sharedList.listId);
+                if (!list) {
+                    return;
+                }
+
+                list.categoryIds.forEach((categoryId) => {
+                    const category = library.getCategoryById(categoryId);
+                    if (!category) {
+                        return;
+                    }
+
+                    category.categoryItems.forEach((categoryItem) => {
+                        if (!categoryItem.group) {
+                            return;
+                        }
+
+                        const item = library.getItemById(categoryItem.itemId);
+                        if (!item) {
+                            return;
+                        }
+
+                        groupItems.push({
+                            itemId: item.id,
+                            categoryId: category.id,
+                            name: item.name,
+                            categoryName: category.name,
+                            qty: categoryItem.qty,
+                            weightMg: item.weight * categoryItem.qty,
+                        });
+                    });
+                });
+            });
+
+            const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
+            const existingGroup = (this.trip.groupGearByUser || []).find((group) => group.userKey === this.trip.currentUserMember.userId);
+
+            return {
+                userKey: this.trip.currentUserMember.userId,
+                label: existingGroup && existingGroup.label ? existingGroup.label : (this.trip.currentUserMember.username || this.trip.currentUserMember.email || 'You'),
+                items: groupItems.sort((a, b) => b.weightMg - a.weightMg),
+                totalWeightMg,
+            };
+        },
         refresh() {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
