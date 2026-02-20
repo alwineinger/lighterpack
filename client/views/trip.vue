@@ -48,7 +48,7 @@
                     </li>
                 </ul>
                 <p class="lpTripChartHint">
-                    Click a user slice to break out individual group items.
+                    Click a list slice to break out individual group items.
                 </p>
             </div>
         </div>
@@ -226,17 +226,19 @@ export default {
             }
 
             const groups = (this.trip.groupGearByUser || []).slice();
-            const localGroup = this.buildCurrentUserLocalGroup();
-            if (!localGroup) {
+            const localGroups = this.buildCurrentUserLocalGroups();
+            if (!localGroups.length) {
                 return groups;
             }
 
-            const existingIndex = groups.findIndex((group) => group.userKey === localGroup.userKey);
-            if (existingIndex === -1) {
-                groups.push(localGroup);
-            } else {
-                groups.splice(existingIndex, 1, localGroup);
-            }
+            localGroups.forEach((localGroup) => {
+                const existingIndex = groups.findIndex((group) => group.userKey === localGroup.userKey);
+                if (existingIndex === -1) {
+                    groups.push(localGroup);
+                } else {
+                    groups.splice(existingIndex, 1, localGroup);
+                }
+            });
 
             return groups;
         },
@@ -291,24 +293,26 @@ export default {
         window.removeEventListener('resize', this.updateChart);
     },
     methods: {
-        buildCurrentUserLocalGroup() {
+        buildCurrentUserLocalGroups() {
             if (!this.trip || !this.trip.currentUserMember || !this.trip.currentUserMember.userId) {
-                return null;
+                return [];
             }
 
             const library = this.$store.state.library;
             const sharedLists = this.currentUserSharedLists;
             if (!library || !sharedLists.length) {
-                return null;
+                return [];
             }
 
-            const groupItems = [];
-            sharedLists.forEach((sharedList) => {
+            const memberName = this.trip.currentUserMember.username || this.trip.currentUserMember.email || 'You';
+
+            return sharedLists.map((sharedList) => {
                 const list = library.getListById(sharedList.listId);
                 if (!list) {
-                    return;
+                    return null;
                 }
 
+                const groupItems = [];
                 list.categoryIds.forEach((categoryId) => {
                     const category = library.getCategoryById(categoryId);
                     if (!category) {
@@ -328,6 +332,7 @@ export default {
                         groupItems.push({
                             itemId: item.id,
                             categoryId: category.id,
+                            listId: sharedList.listId,
                             name: item.name,
                             categoryName: category.name,
                             qty: categoryItem.qty,
@@ -335,17 +340,20 @@ export default {
                         });
                     });
                 });
-            });
 
-            const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
-            const existingGroup = (this.trip.groupGearByUser || []).find((group) => group.userKey === this.trip.currentUserMember.userId);
+                const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
+                const existingGroup = (this.trip.groupGearByUser || []).find((group) => group.userKey === `${this.trip.currentUserMember.userId}:${sharedList.listId}`);
+                const listName = sharedList.listName || list.name || `List #${sharedList.listId}`;
 
-            return {
-                userKey: this.trip.currentUserMember.userId,
-                label: existingGroup && existingGroup.label ? existingGroup.label : (this.trip.currentUserMember.username || this.trip.currentUserMember.email || 'You'),
-                items: groupItems.sort((a, b) => b.weightMg - a.weightMg),
-                totalWeightMg,
-            };
+                return {
+                    userKey: `${this.trip.currentUserMember.userId}:${sharedList.listId}`,
+                    userId: this.trip.currentUserMember.userId,
+                    listId: sharedList.listId,
+                    label: existingGroup && existingGroup.label ? existingGroup.label : `${listName} (${memberName})`,
+                    items: groupItems.sort((a, b) => b.weightMg - a.weightMg),
+                    totalWeightMg,
+                };
+            }).filter((group) => !!group);
         },
         refresh() {
             loadTrip(this.$route.params.tripId).then((trip) => {
