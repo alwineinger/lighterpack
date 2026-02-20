@@ -14,7 +14,7 @@
         .lpHandle,
         .lpArrows,
         .lpStar {
-            visibility: visible;
+            display: inline-block;
         }
     }
 
@@ -26,18 +26,18 @@
 
 .lpGroup {
     cursor: pointer;
+    display: none;
     font-size: 14px;
-    margin: 0 4px;
+    margin: 0;
     opacity: 0.5;
-    visibility: hidden;
 
     &:hover {
         opacity: 1;
     }
 
     &.lpActive {
+        display: inline-block;
         opacity: 1;
-        visibility: visible;
     }
 }
 
