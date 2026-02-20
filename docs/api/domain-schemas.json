@@ -154,6 +154,27 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "currentUserMember": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "userId": {
+              "type": "string"
+            },
+            "listId": {
+              "type": "integer"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "full",
+                "summary"
+              ]
+            }
+          }
         }
       }
     }

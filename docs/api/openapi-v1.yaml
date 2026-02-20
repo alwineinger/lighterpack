@@ -73,6 +73,18 @@ paths:
       responses:
         '200':
           description: Invitation accepted
+  /api/v1/trips/{tripId}/member-list:
+    put:
+      summary: Update the authenticated member's shared list for a trip
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shared list updated
 components:
   schemas:
     Error:

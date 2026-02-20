@@ -22,7 +22,17 @@
             </button>
         </div>
 
-        <h2>Shared lists</h2>
+        <div class="lpTripSectionHeader">
+            <h2>Shared lists</h2>
+            <div v-if="currentUserListChoices.length" class="lpTripListSelector">
+                <label for="trip-shared-list">Your shared list:</label>
+                <select id="trip-shared-list" :value="selectedSharedListId" @change="onSharedListChange">
+                    <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
+                        {{ list.name }}
+                    </option>
+                </select>
+            </div>
+        </div>
         <ul>
             <li v-for="member in trip.members" :key="member.userId || member.email">
                 <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
@@ -72,7 +82,9 @@
 </template>
 
 <script>
-import { acceptTripInvitation, inviteTripUser, loadTrip } from '../api/mobile-api';
+import {
+    acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList,
+} from '../api/mobile-api';
 import unitSelect from '../components/unit-select.vue';
 
 const pies = require('../pies.js');
@@ -93,6 +105,7 @@ export default {
                 email: '',
                 role: 'editor',
             },
+            selectedSharedListId: null,
         };
     },
     computed: {
@@ -104,6 +117,17 @@ export default {
         },
         totalGroupWeightMg() {
             return this.sortedGroups.reduce((sum, group) => sum + group.totalWeightMg, 0);
+        },
+
+        currentUserListChoices() {
+            const availableLists = this.$store.state.library.lists || [];
+            return availableLists.map((list) => {
+                const trimmedName = list.name && list.name.trim();
+                return {
+                    id: list.id,
+                    name: trimmedName || `Untitled list #${list.id}`,
+                };
+            });
         },
     },
     watch: {
@@ -125,6 +149,7 @@ export default {
         refresh() {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
+                this.selectedSharedListId = trip.currentUserMember ? trip.currentUserMember.listId : null;
                 this.$nextTick(this.updateChart);
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
@@ -176,6 +201,19 @@ export default {
                 this.refresh();
             });
         },
+
+        onSharedListChange(event) {
+            const listId = parseInt(event.target.value, 10);
+            if (Number.isNaN(listId) || listId === this.selectedSharedListId || !this.trip) {
+                return;
+            }
+
+            updateTripMemberList(this.trip.id, { listId }).then(() => {
+                this.selectedSharedListId = listId;
+                this.refresh();
+            });
+        },
+
         setTotalUnit(unit) {
             this.$store.commit('setTotalUnit', unit);
         },
@@ -273,5 +311,19 @@ export default {
     display: flex;
     gap: 8px;
     margin: 10px 0 20px;
+}
+
+.lpTripSectionHeader {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.lpTripListSelector {
+    align-items: center;
+    display: flex;
+    gap: 8px;
 }
 </style>
