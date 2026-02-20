@@ -12,6 +12,26 @@
             </div>
         </div>
 
+        <modal id="renameTripDialog" :shown="isRenameTripDialogShown" @hide="cancelEditingTripName">
+            <h2>Rename trip</h2>
+            <input
+                ref="renameTripInput"
+                v-model="tripNameDraft"
+                type="text"
+                class="lpTripRenameInput"
+                maxlength="100"
+                @keyup.enter="saveTripName"
+            >
+            <div class="lpTripRenameActions">
+                <button class="lpButton lpSmall" @click="saveTripName">
+                    Save
+                </button>
+                <button class="lpButton lpSmall" @click="cancelEditingTripName">
+                    Cancel
+                </button>
+            </div>
+        </modal>
+
         <div class="lpTripNotes">
             <div class="lpTripSectionHeader">
                 <h2>Trip Notes</h2>
@@ -232,6 +252,7 @@ import {
     acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripName, updateTripNotes,
 } from '../api/mobile-api';
 import colorPicker from '../components/colorpicker.vue';
+import modal from '../components/modal.vue';
 import unitSelect from '../components/unit-select.vue';
 
 const markdown = require('markdown').markdown;
@@ -244,6 +265,7 @@ export default {
     name: 'TripView',
     components: {
         colorPicker,
+        modal,
         unitSelect,
     },
     mixins: [utilsMixin],
@@ -258,6 +280,8 @@ export default {
             },
             isEditingTripNotes: false,
             tripNotesDraft: '',
+            tripNameDraft: '',
+            isRenameTripDialogShown: false,
             isRenamingTrip: false,
             groupColorsByKey: {},
         };
@@ -505,20 +529,35 @@ export default {
                 return;
             }
 
-            const currentName = this.trip.name || '';
-            const nextName = window.prompt('Rename trip', currentName);
-            if (nextName === null) {
+            this.tripNameDraft = this.trip.name || '';
+            this.isRenameTripDialogShown = true;
+            this.$nextTick(() => {
+                if (this.$refs.renameTripInput) {
+                    this.$refs.renameTripInput.focus();
+                    this.$refs.renameTripInput.select();
+                }
+            });
+        },
+        cancelEditingTripName() {
+            this.tripNameDraft = this.trip && this.trip.name ? this.trip.name : '';
+            this.isRenameTripDialogShown = false;
+        },
+        saveTripName() {
+            if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
                 return;
             }
 
-            const trimmedName = nextName.trim();
+            const currentName = this.trip.name || '';
+            const trimmedName = this.tripNameDraft.trim();
             if (!trimmedName || trimmedName === currentName) {
+                this.cancelEditingTripName();
                 return;
             }
 
             this.isRenamingTrip = true;
             updateTripName(this.trip.id, trimmedName).then((response) => {
                 this.trip.name = response.name || trimmedName;
+                this.cancelEditingTripName();
             }).finally(() => {
                 this.isRenamingTrip = false;
             });
@@ -742,6 +781,16 @@ export default {
     :last-child {
         margin-bottom: 0;
     }
+}
+
+.lpTripRenameInput {
+    width: 100%;
+}
+
+.lpTripRenameActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .lpTripChartHint {
