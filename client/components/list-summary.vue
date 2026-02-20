@@ -28,6 +28,10 @@
     }
 }
 
+.lpTotalUnitSelect {
+    margin-left: 3px;
+}
+
 @media (max-width: 900px) {
     .lpListSummary {
         flex-direction: column;
@@ -104,7 +108,8 @@
                         {{ list.totalPrice | displayPrice(library.currencySymbol) }}
                     </span>
                     <span class="lpCell lpNumber lpSubtotal" :title="list.totalQty +' items'">
-                        <span class="lpDisplaySubtotal">{{ list.totalWeight | displayWeight(library.totalUnit) }}</span> <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        <span class="lpDisplaySubtotal">{{ list.totalWeight | displayWeight(library.totalUnit) }}</span>
+                        <unitSelect class="lpTotalUnitSelect" :unit="library.totalUnit" :on-change="setTotalUnit" />
                     </span>
                 </li>
                 <li v-if="list.totalConsumableWeight" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
@@ -138,7 +143,6 @@
                     </span>
                 </li>
             </ul>
-            <unitSelect />
         </div>
     </div>
 </template>
