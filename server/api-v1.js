@@ -70,6 +70,11 @@ function userTripRole(trip, user) {
     return member ? member.role : null;
 }
 
+function canEditTrip(trip, user) {
+    const role = userTripRole(trip, user);
+    return role === 'owner' || role === 'editor';
+}
+
 function buildTripSummary(trip, user) {
     return {
         id: trip._id.toString(),
@@ -386,6 +391,7 @@ router.post('/api/v1/trips', (req, res) => {
         }
         const trip = {
             name,
+            notes: '',
             ownerUserId: user._id.toString(),
             members: [{
                 userId: user._id.toString(),
@@ -565,6 +571,40 @@ router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
     });
 });
 
+router.put('/api/v1/trips/:tripId/notes', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            if (!canEditTrip(trip, user)) {
+                return apiError(res, 403, 'FORBIDDEN', 'No access to edit trip notes.');
+            }
+
+            const notes = req.body.notes === undefined ? '' : String(req.body.notes);
+            trip.notes = notes;
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update trip notes.');
+                }
+                return res.status(200).json({
+                    data: {
+                        notes: trip.notes,
+                    },
+                });
+            });
+        });
+    });
+});
+
 router.get('/api/v1/trips/:tripId', (req, res) => {
     withAuthenticatedUser(req, res, (user) => {
         const tripObjectId = parseObjectId(req.params.tripId);
@@ -590,6 +630,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                     data: {
                         id: trip._id.toString(),
                         name: trip.name,
+                        notes: trip.notes || '',
                         canManage: canManageTrip(trip, user),
                         currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
                         pendingInvitation,
@@ -670,6 +711,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                             data: {
                                 id: trip._id.toString(),
                                 name: trip.name,
+                                notes: trip.notes || '',
                                 canManage: canManageTrip(trip, user),
                                 currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
                                 pendingInvitation,
