@@ -65,21 +65,29 @@
         <div class="lpTripSectionHeader lpTripSharedListsSection">
             <h2>Shared lists</h2>
             <div v-if="currentUserListChoices.length" class="lpTripListSelector">
-                <label for="trip-shared-list">Your shared list:</label>
-                <select id="trip-shared-list" :value="selectedSharedListId" @change="onSharedListChange">
-                    <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
-                        {{ list.name }}
-                    </option>
-                </select>
-                <label for="trip-shared-visibility">Share level:</label>
-                <select id="trip-shared-visibility" :value="selectedVisibility" @change="onVisibilityChange">
-                    <option value="summary">
-                        Summary
-                    </option>
-                    <option value="full">
-                        All items
-                    </option>
-                </select>
+                <div v-for="sharedList in currentUserSharedLists" :key="'my-shared-list-' + sharedList.listId" class="lpTripSharedListRow">
+                    <label>Your list:</label>
+                    <select :value="sharedList.listId" @change="onSharedListChange(sharedList.listId, $event)">
+                        <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
+                            {{ list.name }}
+                        </option>
+                    </select>
+                    <label>Share level:</label>
+                    <select :value="sharedList.visibility" @change="onVisibilityChange(sharedList.listId, $event)">
+                        <option value="summary">
+                            Summary
+                        </option>
+                        <option value="full">
+                            All items
+                        </option>
+                    </select>
+                    <button class="lpButton lpSmall" @click="removeSharedList(sharedList.listId)">
+                        Remove
+                    </button>
+                </div>
+                <button v-if="availableListOptionsForShare.length" class="lpButton lpSmall" @click="addSharedList">
+                    Add list
+                </button>
             </div>
         </div>
 
@@ -87,83 +95,93 @@
             <h2>Shared content</h2>
         </div>
         <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
-            <h3>{{ member.username || member.email }} — {{ member.listName || 'No shared list' }} ({{ member.visibility }})</h3>
-            <div v-if="member.sharedContent && member.sharedContent.categories && member.sharedContent.categories.length" class="lpTripSharedSummary">
-                <ul class="lpTotals lpTable lpDataTable">
-                    <li class="lpRow lpHeader">
-                        <span class="lpCell">&nbsp;</span>
-                        <span class="lpCell">Category</span>
-                        <span class="lpCell">Weight</span>
-                    </li>
-                    <li v-for="category in member.sharedContent.categories" :key="category.categoryId" class="lpTotalCategory lpRow">
-                        <span class="lpCell lpLegendCell">
-                            <span class="lpLegend" :style="{ 'background-color': category.categoryColor || '#999' }" />
-                        </span>
-                        <span class="lpCell">
-                            {{ category.categoryName }}
-                        </span>
-                        <span class="lpCell lpNumber">
-                            <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
-                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                        </span>
-                    </li>
-                    <li class="lpRow lpFooter lpTotal">
-                        <span class="lpCell" />
-                        <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(member) + ' items'">Total</span>
-                        <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(member) + ' items'">
-                            <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(member) | displayWeight(library.totalUnit) }}</span>
-                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                        </span>
-                    </li>
-                    <li v-if="getSharedConsumableWeight(member) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
-                        <span class="lpCell" />
-                        <span class="lpCell lpSubtotal">Consumable</span>
-                        <span class="lpCell lpNumber lpSubtotal">
-                            <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(member) | displayWeight(library.totalUnit) }}</span>
-                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                        </span>
-                    </li>
-                    <li v-if="getSharedWornWeight(member) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
-                        <span class="lpCell" />
-                        <span class="lpCell lpSubtotal">Worn</span>
-                        <span class="lpCell lpNumber lpSubtotal">
-                            <span class="lpDisplaySubtotal">{{ getSharedWornWeight(member) | displayWeight(library.totalUnit) }}</span>
-                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                        </span>
-                    </li>
-                    <li v-if="getSharedBaseWeight(member) !== getSharedTotalWeight(member)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
-                        <span class="lpCell" />
-                        <span class="lpCell lpSubtotal">Base Weight</span>
-                        <span class="lpCell lpNumber lpSubtotal">
-                            <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(member) | displayWeight(library.totalUnit) }}</span>
-                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                        </span>
-                    </li>
-                </ul>
-            </div>
-            <div v-if="isFullSharedContent(member)">
-                <div v-for="category in member.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
-                    <h4>
-                        {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
-                    </h4>
-                    <ul v-if="category.items && category.items.length">
-                        <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
-                            {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+            <h3>{{ member.username || member.email }}</h3>
+            <div
+                v-for="sharedList in member.sharedLists || []"
+                :key="(member.userId || member.email) + '-shared-' + sharedList.listId"
+                class="lpTripMemberSharedList"
+            >
+                <h4>{{ sharedList.listName || 'No shared list' }} ({{ sharedList.visibility }})</h4>
+                <div v-if="sharedList.sharedContent && sharedList.sharedContent.categories && sharedList.sharedContent.categories.length" class="lpTripSharedSummary">
+                    <ul class="lpTotals lpTable lpDataTable">
+                        <li class="lpRow lpHeader">
+                            <span class="lpCell">&nbsp;</span>
+                            <span class="lpCell">Category</span>
+                            <span class="lpCell">Weight</span>
+                        </li>
+                        <li v-for="category in sharedList.sharedContent.categories" :key="category.categoryId" class="lpTotalCategory lpRow">
+                            <span class="lpCell lpLegendCell">
+                                <span class="lpLegend" :style="{ 'background-color': category.categoryColor || '#999' }" />
+                            </span>
+                            <span class="lpCell">
+                                {{ category.categoryName }}
+                            </span>
+                            <span class="lpCell lpNumber">
+                                <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                            </span>
+                        </li>
+                        <li class="lpRow lpFooter lpTotal">
+                            <span class="lpCell" />
+                            <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">Total</span>
+                            <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">
+                                <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                            </span>
+                        </li>
+                        <li v-if="getSharedConsumableWeight(sharedList) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
+                            <span class="lpCell" />
+                            <span class="lpCell lpSubtotal">Consumable</span>
+                            <span class="lpCell lpNumber lpSubtotal">
+                                <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                            </span>
+                        </li>
+                        <li v-if="getSharedWornWeight(sharedList) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
+                            <span class="lpCell" />
+                            <span class="lpCell lpSubtotal">Worn</span>
+                            <span class="lpCell lpNumber lpSubtotal">
+                                <span class="lpDisplaySubtotal">{{ getSharedWornWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                            </span>
+                        </li>
+                        <li v-if="getSharedBaseWeight(sharedList) !== getSharedTotalWeight(sharedList)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
+                            <span class="lpCell" />
+                            <span class="lpCell lpSubtotal">Base Weight</span>
+                            <span class="lpCell lpNumber lpSubtotal">
+                                <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                            </span>
                         </li>
                     </ul>
-                    <p v-else>
-                        No items in this category.
-                    </p>
                 </div>
+                <div v-if="isFullSharedContent(sharedList)">
+                    <div v-for="category in sharedList.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
+                        <h4>
+                            {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                        </h4>
+                        <ul v-if="category.items && category.items.length">
+                            <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
+                                {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                            </li>
+                        </ul>
+                        <p v-else>
+                            No items in this category.
+                        </p>
+                    </div>
+                </div>
+                <p v-else-if="!sharedList.sharedContent || !sharedList.sharedContent.categories || !sharedList.sharedContent.categories.length">
+                    No shared items yet.
+                </p>
             </div>
-            <p v-else-if="!member.sharedContent || !member.sharedContent.categories || !member.sharedContent.categories.length">
-                No shared items yet.
+            <p v-if="!(member.sharedLists || []).length">
+                No shared lists yet.
             </p>
         </div>
         <ul>
             <li v-for="member in trip.members" :key="member.userId || member.email">
                 <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
-                <span v-if="member.listName"> • {{ member.listName }} ({{ member.visibility }})</span>
+                <span v-for="sharedList in member.sharedLists || []" :key="(member.userId || member.email) + '-list-' + sharedList.listId"> • {{ sharedList.listName }} ({{ sharedList.visibility }})</span>
             </li>
         </ul>
     </div>
@@ -193,8 +211,6 @@ export default {
                 email: '',
                 role: 'editor',
             },
-            selectedSharedListId: null,
-            selectedVisibility: 'full',
         };
     },
     computed: {
@@ -217,6 +233,16 @@ export default {
                     name: trimmedName || `Untitled list #${list.id}`,
                 };
             });
+        },
+        currentUserSharedLists() {
+            if (!this.trip || !this.trip.currentUserMember || !this.trip.currentUserMember.sharedLists) {
+                return [];
+            }
+            return this.trip.currentUserMember.sharedLists;
+        },
+        availableListOptionsForShare() {
+            const selectedIds = this.currentUserSharedLists.map((sharedList) => sharedList.listId);
+            return this.currentUserListChoices.filter((list) => selectedIds.indexOf(list.id) === -1);
         },
         sortedMembers() {
             return ((this.trip && this.trip.members) || []).slice().sort((a, b) => {
@@ -248,8 +274,6 @@ export default {
         refresh() {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
-                this.selectedSharedListId = trip.currentUserMember ? trip.currentUserMember.listId : null;
-                this.selectedVisibility = trip.currentUserMember ? trip.currentUserMember.visibility : 'full';
                 this.$nextTick(this.updateChart);
                 const pendingInvite = trip.pendingInvitation;
                 if (pendingInvite) {
@@ -306,54 +330,75 @@ export default {
             if (!this.trip) {
                 return Promise.resolve();
             }
-            return updateTripMemberList(this.trip.id, payload).then(() => {
-                this.selectedSharedListId = payload.listId;
-                this.selectedVisibility = payload.visibility;
-                this.refresh();
+            return updateTripMemberList(this.trip.id, payload).then(() => this.refresh());
+        },
+        onSharedListChange(currentListId, event) {
+            const listId = parseInt(event.target.value, 10);
+            if (Number.isNaN(listId) || listId === currentListId || !this.trip) {
+                return;
+            }
+            const existing = this.currentUserSharedLists.find((sharedList) => sharedList.listId === currentListId);
+            this.updateSharedSettings({
+                previousListId: currentListId,
+                listId,
+                visibility: existing ? existing.visibility : 'full',
+                remove: false,
             });
         },
-        onSharedListChange(event) {
-            const listId = parseInt(event.target.value, 10);
-            if (Number.isNaN(listId) || listId === this.selectedSharedListId || !this.trip) {
+        onVisibilityChange(listId, event) {
+            const visibility = event.target.value === 'summary' ? 'summary' : 'full';
+            const existing = this.currentUserSharedLists.find((sharedList) => sharedList.listId === listId);
+            if (!existing || visibility === existing.visibility || !this.trip) {
                 return;
             }
             this.updateSharedSettings({
                 listId,
-                visibility: this.selectedVisibility,
+                visibility,
+                remove: false,
             });
         },
-        onVisibilityChange(event) {
-            const visibility = event.target.value === 'summary' ? 'summary' : 'full';
-            if (visibility === this.selectedVisibility || !this.trip || !this.selectedSharedListId) {
+        addSharedList() {
+            if (!this.availableListOptionsForShare.length) {
                 return;
             }
             this.updateSharedSettings({
-                listId: this.selectedSharedListId,
-                visibility,
+                listId: this.availableListOptionsForShare[0].id,
+                visibility: 'full',
+                remove: false,
             });
         },
-        getSharedTotalWeight(member) {
-            const totals = member && member.sharedContent && member.sharedContent.totals;
+        removeSharedList(listId) {
+            if (this.currentUserSharedLists.length <= 1) {
+                return;
+            }
+            this.updateSharedSettings({
+                listId,
+                visibility: 'full',
+                remove: true,
+            });
+        },
+        getSharedTotalWeight(sharedList) {
+            const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalWeightMg : 0;
         },
-        getSharedConsumableWeight(member) {
-            const totals = member && member.sharedContent && member.sharedContent.totals;
+        getSharedConsumableWeight(sharedList) {
+            const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalConsumableWeightMg : 0;
         },
-        getSharedWornWeight(member) {
-            const totals = member && member.sharedContent && member.sharedContent.totals;
+        getSharedWornWeight(sharedList) {
+            const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalWornWeightMg : 0;
         },
-        getSharedBaseWeight(member) {
-            const totals = member && member.sharedContent && member.sharedContent.totals;
+        getSharedBaseWeight(sharedList) {
+            const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalBaseWeightMg : 0;
         },
-        getSharedTotalItemCount(member) {
-            const totals = member && member.sharedContent && member.sharedContent.totals;
+        getSharedTotalItemCount(sharedList) {
+            const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalItemCount : 0;
         },
-        isFullSharedContent(member) {
-            return !!(member && member.sharedContent && member.sharedContent.mode === 'full' && member.sharedContent.categories && member.sharedContent.categories.length);
+        isFullSharedContent(sharedList) {
+            return !!(sharedList && sharedList.sharedContent && sharedList.sharedContent.mode === 'full' && sharedList.sharedContent.categories && sharedList.sharedContent.categories.length);
         },
 
         setTotalUnit(unit) {
@@ -470,10 +515,22 @@ export default {
 }
 
 .lpTripListSelector {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.lpTripSharedListRow {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.lpTripMemberSharedList {
+    margin-bottom: 10px;
 }
 
 .lpTripSharedSummary {
