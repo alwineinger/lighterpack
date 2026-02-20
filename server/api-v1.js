@@ -624,12 +624,13 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                             sharedLists: hydratedSharedLists,
                         });
 
-                        const groupItems = [];
                         hydratedSharedLists.forEach((sharedList) => {
                             const list = library.getListById(sharedList.listId);
                             if (!list) {
                                 return;
                             }
+
+                            const groupItems = [];
                             list.categoryIds.forEach((categoryId) => {
                                 const category = library.getCategoryById(categoryId);
                                 if (!category) return;
@@ -640,6 +641,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                                     groupItems.push({
                                         itemId: item.id,
                                         categoryId: category.id,
+                                        listId: sharedList.listId,
                                         name: item.name,
                                         categoryName: category.name,
                                         qty: categoryItem.qty,
@@ -647,14 +649,19 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                                     });
                                 });
                             });
-                        });
-                        const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
-                        groupGearByUser.push({
-                            userKey: member.userId,
-                            label: member.username || member.email,
-                            items: groupItems.sort((a, b) => b.weightMg - a.weightMg).map((item) => ({ ...item, weightDisplay: (item.weightMg / 28349.5).toFixed(2) })),
-                            totalWeightMg,
-                            totalWeightDisplay: (totalWeightMg / 28349.5).toFixed(2),
+                            const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
+                            const memberName = member.username || member.email;
+                            const listName = sharedList.listName || `List #${sharedList.listId}`;
+
+                            groupGearByUser.push({
+                                userKey: `${member.userId}:${sharedList.listId}`,
+                                userId: member.userId,
+                                listId: sharedList.listId,
+                                label: `${listName} (${memberName})`,
+                                items: groupItems.sort((a, b) => b.weightMg - a.weightMg).map((item) => ({ ...item, weightDisplay: (item.weightMg / 28349.5).toFixed(2) })),
+                                totalWeightMg,
+                                totalWeightDisplay: (totalWeightMg / 28349.5).toFixed(2),
+                            });
                         });
                     }
                     if (!pending) {
