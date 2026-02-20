@@ -7,21 +7,6 @@
             <h1>{{ trip.name }}</h1>
         </div>
 
-        <div v-if="trip.canManage" class="lpTripInvite">
-            <input v-model="invite.email" type="email" placeholder="Invite email">
-            <select v-model="invite.role">
-                <option value="editor">
-                    Editor
-                </option>
-                <option value="viewer">
-                    Viewer
-                </option>
-            </select>
-            <button class="lpButton lpSmall" @click="sendInvite">
-                Invite
-            </button>
-        </div>
-
         <h2>Group Gear</h2>
         <div class="lpListSummary lpTripSummary">
             <div class="lpChartContainer">
@@ -64,6 +49,20 @@
 
         <div class="lpTripSectionHeader lpTripSharedListsSection">
             <h2>Shared lists</h2>
+            <div v-if="trip.canManage" class="lpTripInvite">
+                <input v-model="invite.email" type="email" placeholder="Invite email">
+                <select v-model="invite.role">
+                    <option value="editor">
+                        Editor
+                    </option>
+                    <option value="viewer">
+                        Viewer
+                    </option>
+                </select>
+                <button class="lpButton lpSmall" @click="sendInvite">
+                    Invite
+                </button>
+            </div>
             <div v-if="currentUserListChoices.length" class="lpTripListSelector">
                 <div v-for="sharedList in currentUserSharedLists" :key="'my-shared-list-' + sharedList.listId" class="lpTripSharedListRow">
                     <label>Your list:</label>
@@ -583,7 +582,7 @@ export default {
 .lpTripInvite {
     display: flex;
     gap: 8px;
-    margin: 10px 0 20px;
+    margin: 0;
 }
 
 .lpTripSectionHeader {
