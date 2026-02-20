@@ -31,8 +31,13 @@
     opacity: 0.5;
     visibility: hidden;
 
+    &:hover {
+        opacity: 1;
+    }
+
     &.lpActive {
         opacity: 1;
+        visibility: visible;
     }
 }
 
