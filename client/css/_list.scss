@@ -179,10 +179,20 @@ input.lpCategoryName { /* specificity */
 }
 
 .lpItemsHeader {
-    align-items: flex-end;
+    align-items: center;
     border-bottom: 1px solid #aaa;
     border-top: none;
-    height: 31px;
+    color: #555;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    min-height: 36px;
+    text-transform: uppercase;
+
+    .lpCategoryName {
+        letter-spacing: normal;
+        text-transform: none;
+    }
 }
 
 .lpItemsFooter {

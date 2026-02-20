@@ -30,35 +30,41 @@
 
 @media (max-width: 900px) {
     .lpListSummary {
-        display: block;
-        width: 100%;
+        flex-direction: column;
+        gap: 15px;
     }
 
     .lpChartContainer {
-        display: none;
+        flex: 0 0 auto;
+        margin: 0 auto;
+        max-width: 320px;
+        width: 100%;
     }
 
     .lpTotalsContainer {
-        flex: 1 1 100%;
-        max-width: 100%;
         width: 100%;
     }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
     .lpListSummary {
-        width: 100%;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .lpChartContainer {
+        max-width: 220px;
     }
 
     .lpTotalsContainer {
-        width: 100%;
+        flex: 1 1 auto;
     }
 }
 </style>
 
 <template>
     <div v-if="showTotals || showChart" class="lpListSummary" :class="{lpChartOnly: !showTotals}">
-        <div class="lpChartContainer">
+        <div v-if="showChart" class="lpChartContainer">
             <canvas ref="chartCanvas" class="lpChart" height="260" width="260" />
         </div>
         <div v-if="showTotals" class="lpTotalsContainer">
@@ -97,51 +103,12 @@
                     <span v-if="library.optionalFields['price']" class="lpCell lpNumber lpSubtotal" :title="list.totalQty +' items'">
                         {{ list.totalPrice | displayPrice(library.currencySymbol) }}
                     </span>
-                    <span class="lpCell lpNumber lpSubtotal">
-                        <span class="lpTotalValue" :title="list.totalQty + ' items'">
-                            {{ list.totalWeight | displayWeight(library.totalUnit) }}
-                        </span>
-                        <span class="lpTotalUnit"><unitSelect :unit="library.totalUnit" :on-change="setTotalUnit" /></span>
-                    </span>
-                </li>
-                <li v-if="list.totalConsumableWeight" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
-                    <span class="lpCell" />
-                    <span class="lpCell lpSubtotal">
-                        Consumable
-                    </span>
-                    <span v-if="library.optionalFields['price']" class="lpCell lpNumber lpSubtotal">
-                        {{ list.totalConsumablePrice | displayPrice(library.currencySymbol) }}
-                    </span>
-                    <span class="lpCell lpNumber lpSubtotal">
-                        <span class="lpDisplaySubtotal" :mg="list.totalConsumableWeight">{{ list.totalConsumableWeight | displayWeight(library.totalUnit) }}</span>
-                        <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                    </span>
-                </li>
-                <li v-if="list.totalWornWeight" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
-                    <span class="lpCell" />
-                    <span class="lpCell lpSubtotal">
-                        Worn
-                    </span>
-                    <span v-if="library.optionalFields['price']" class="lpCell lpNumber" />
-                    <span class="lpCell lpNumber lpSubtotal">
-                        <span class="lpDisplaySubtotal" :mg="list.totalWornWeight">{{ list.totalWornWeight | displayWeight(library.totalUnit) }}</span>
-                        <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
-                    </span>
-                </li>
-                <li v-if="list.totalWornWeight || list.totalConsumableWeight" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpBaseWeight">
-                    <span class="lpCell" />
-                    <span class="lpCell lpSubtotal" :title="$options.filters.displayWeight(list.totalPackWeight, library.totalUnit) + ' ' + library.totalUnit + ' pack weight (consumable + base weight)'">
-                        Base Weight
-                    </span>
-                    <span v-if="library.optionalFields['price']" class="lpCell lpNumber" />
-                    <span class="lpCell lpNumber lpSubtotal">
-                        <span class="lpDisplaySubtotal" :mg="list.totalBaseWeight" :title="$options.filters.displayWeight(list.totalPackWeight, library.totalUnit) + ' ' + library.totalUnit + ' pack weight (consumable + base weight)'">
-                            {{ list.totalBaseWeight | displayWeight(library.totalUnit) }}
-                        </span>
-                        <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                    <span class="lpCell lpNumber lpSubtotal" :title="list.totalQty +' items'">
+                        <span class="lpDisplaySubtotal">{{ list.totalWeight | displayWeight(library.totalUnit) }}</span> <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
                     </span>
                 </li>
             </ul>
+            <unitSelect />
         </div>
     </div>
 </template>
@@ -228,8 +195,8 @@ export default {
             if (chartData) {
                 if (this.chart) {
                     this.chart.update({ processedData: chartData });
-                } else {
-                    this.chart = pies({ processedData: chartData, container: document.getElementsByClassName('lpChart')[0], hoverCallback: this.chartHover });
+                } else if (this.$refs.chartCanvas) {
+                    this.chart = pies({ processedData: chartData, container: this.$refs.chartCanvas, hoverCallback: this.chartHover });
                 }
             }
             return chartData;
