@@ -51,3 +51,10 @@ export function acceptTripInvitation(tripId, payload) {
         body: JSON.stringify(payload),
     }).then((response) => response.data);
 }
+
+export function updateTripMemberList(tripId, payload) {
+    return apiRequest(`/api/v1/trips/${tripId}/member-list`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }).then((response) => response.data);
+}

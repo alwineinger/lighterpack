@@ -357,6 +357,47 @@ router.post('/api/v1/trips/:tripId/accept', (req, res) => {
     });
 });
 
+router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            const memberIndex = (trip.members || []).findIndex((member) => member.userId === user._id.toString());
+            if (memberIndex === -1) {
+                return apiError(res, 403, 'FORBIDDEN', 'No access to update this trip membership.');
+            }
+
+            const library = loadLibraryForUser(user);
+            const listId = parseInt(req.body.listId, 10);
+            const list = library.getListById(listId);
+            if (!list) {
+                return apiError(res, 400, 'INVALID_LIST', 'Selected list does not exist.');
+            }
+
+            trip.members[memberIndex] = {
+                ...trip.members[memberIndex],
+                listId,
+            };
+
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update shared list.');
+                }
+                return res.status(200).json({ data: { listId } });
+            });
+        });
+    });
+});
+
 router.get('/api/v1/trips/:tripId', (req, res) => {
     withAuthenticatedUser(req, res, (user) => {
         const tripObjectId = parseObjectId(req.params.tripId);
@@ -383,6 +424,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                         id: trip._id.toString(),
                         name: trip.name,
                         canManage: canManageTrip(trip, user),
+                        currentUserMember: (trip.members || []).find((member) => member.userId === user._id.toString()) || null,
                         pendingInvitation,
                         members,
                         totalUnit: 'oz',
@@ -441,6 +483,7 @@ router.get('/api/v1/trips/:tripId', (req, res) => {
                                 id: trip._id.toString(),
                                 name: trip.name,
                                 canManage: canManageTrip(trip, user),
+                                currentUserMember: (trip.members || []).find((member) => member.userId === user._id.toString()) || null,
                                 pendingInvitation,
                                 members,
                                 totalUnit: 'oz',
