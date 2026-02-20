@@ -115,6 +115,30 @@
                             <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
                         </span>
                     </li>
+                    <li v-if="getSharedConsumableWeight(member) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
+                        <span class="lpCell" />
+                        <span class="lpCell lpSubtotal">Consumable</span>
+                        <span class="lpCell lpNumber lpSubtotal">
+                            <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(member) | displayWeight(library.totalUnit) }}</span>
+                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        </span>
+                    </li>
+                    <li v-if="getSharedWornWeight(member) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
+                        <span class="lpCell" />
+                        <span class="lpCell lpSubtotal">Worn</span>
+                        <span class="lpCell lpNumber lpSubtotal">
+                            <span class="lpDisplaySubtotal">{{ getSharedWornWeight(member) | displayWeight(library.totalUnit) }}</span>
+                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        </span>
+                    </li>
+                    <li v-if="getSharedBaseWeight(member) !== getSharedTotalWeight(member)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
+                        <span class="lpCell" />
+                        <span class="lpCell lpSubtotal">Base Weight</span>
+                        <span class="lpCell lpNumber lpSubtotal">
+                            <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(member) | displayWeight(library.totalUnit) }}</span>
+                            <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                        </span>
+                    </li>
                 </ul>
             </div>
             <div v-if="isFullSharedContent(member)">
@@ -311,6 +335,18 @@ export default {
         getSharedTotalWeight(member) {
             const totals = member && member.sharedContent && member.sharedContent.totals;
             return totals ? totals.totalWeightMg : 0;
+        },
+        getSharedConsumableWeight(member) {
+            const totals = member && member.sharedContent && member.sharedContent.totals;
+            return totals ? totals.totalConsumableWeightMg : 0;
+        },
+        getSharedWornWeight(member) {
+            const totals = member && member.sharedContent && member.sharedContent.totals;
+            return totals ? totals.totalWornWeightMg : 0;
+        },
+        getSharedBaseWeight(member) {
+            const totals = member && member.sharedContent && member.sharedContent.totals;
+            return totals ? totals.totalBaseWeightMg : 0;
         },
         getSharedTotalItemCount(member) {
             const totals = member && member.sharedContent && member.sharedContent.totals;
