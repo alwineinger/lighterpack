@@ -63,7 +63,9 @@
                 class="lpTripList"
                 :class="{lpActive: isActiveTrip(trip)}"
             >
-                <span class="lpTripLink" @click="openTrip(trip)">{{ trip.name }}</span>
+                <router-link class="lpTripLink" :to="tripRoute(trip)">
+                    {{ trip.name }}
+                </router-link>
                 <span class="lpTripRole">{{ trip.role }}</span>
             </li>
         </ul>
@@ -86,24 +88,34 @@ export default {
             trips: [],
         };
     },
+    watch: {
+        '$store.state.loggedIn': function (loggedIn) {
+            if (loggedIn) {
+                this.refreshTrips();
+            }
+        },
+    },
     mounted() {
         this.refreshTrips();
     },
     methods: {
+        tripRoute(trip) {
+            return `/trips/${trip.id}`;
+        },
         isActiveTrip(trip) {
-            return this.$route.path === `/trips/${trip.id}`;
+            return this.$route.path === this.tripRoute(trip);
         },
         refreshTrips() {
             loadTrips()
                 .then((trips) => {
-                    this.trips = trips;
+                    this.trips = Array.isArray(trips) ? trips : [];
                 })
                 .catch(() => {
                     this.trips = [];
                 });
         },
         openTrip(trip) {
-            this.$router.push(`/trips/${trip.id}`);
+            this.$router.push(this.tripRoute(trip));
         },
         newTrip() {
             const name = window.prompt('Trip name');
