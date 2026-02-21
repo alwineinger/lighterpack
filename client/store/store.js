@@ -233,7 +233,8 @@ const store = new Vuex.Store({
                 item.name = row.name;
                 item.description = row.description;
                 categoryItem.qty = parseFloat(row.qty);
-                item.weight = weightUtils.WeightToMg(parseFloat(row.weight), row.unit);
+                const parsedWeight = weightUtils.ParseWeightInput(row.weight, row.unit);
+                item.weight = weightUtils.WeightToMg(parsedWeight, row.unit);
                 item.authorUnit = row.unit;
                 category.name = row.category;
             }

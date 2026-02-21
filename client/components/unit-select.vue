@@ -35,26 +35,30 @@
         width: 1.1em;
     }
 
-    .lpUnitDropdown {
-        background: #fff;
-        border: 1px solid #ccc;
-        display: none;
-        left: 0;
-        padding: 0;
-        position: absolute;
-        top: -1px;
-        z-index: $aboveSidebar+1;
+        .lpUnitDropdown {
+            background: #fff;
+            border: 1px solid #ccc;
+            display: none;
+            left: 0;
+            padding: 0;
+            position: absolute;
+            top: -1px;
+            z-index: $aboveSidebar+1;
 
         &.lb {
             top: -30px;
         }
 
-        &.g {
+        &.lbs-oz {
             top: -55px;
         }
 
+        &.g {
+            top: -80px;
+        }
+
         &.kg {
-            top: -81px;
+            top: -106px;
         }
 
         li {
@@ -96,6 +100,7 @@ export default {
             units: [
                 'oz',
                 'lb',
+                'lbs-oz',
                 'g',
                 'kg',
             ],

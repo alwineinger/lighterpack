@@ -83,7 +83,7 @@
                         </span>
                         <span class="lpCell">{{ group.label }}</span>
                         <span class="lpCell lpNumber">
-                            {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                            {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
                         </span>
                     </li>
                     <li class="lpRow lpFooter lpTotal">
@@ -102,10 +102,10 @@
         </div>
 
         <div v-for="group in groupGearByUserView" :key="group.userKey" class="lpTripGroupPanel">
-            <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}</h3>
+            <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}</h3>
             <ul>
                 <li v-for="item in group.items" :key="item.itemId + '-' + item.categoryId">
-                    {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                    {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
                 </li>
             </ul>
         </div>
@@ -180,7 +180,7 @@
                             </span>
                             <span class="lpCell lpNumber">
                                 <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                             </span>
                         </li>
                         <li class="lpRow lpFooter lpTotal">
@@ -188,7 +188,7 @@
                             <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">Total</span>
                             <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">
                                 <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                             </span>
                         </li>
                         <li v-if="getSharedConsumableWeight(sharedList) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
@@ -196,7 +196,7 @@
                             <span class="lpCell lpSubtotal">Consumable</span>
                             <span class="lpCell lpNumber lpSubtotal">
                                 <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                             </span>
                         </li>
                         <li v-if="getSharedWornWeight(sharedList) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
@@ -204,7 +204,7 @@
                             <span class="lpCell lpSubtotal">Worn</span>
                             <span class="lpCell lpNumber lpSubtotal">
                                 <span class="lpDisplaySubtotal">{{ getSharedWornWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                             </span>
                         </li>
                         <li v-if="getSharedBaseWeight(sharedList) !== getSharedTotalWeight(sharedList)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
@@ -212,7 +212,7 @@
                             <span class="lpCell lpSubtotal">Base Weight</span>
                             <span class="lpCell lpNumber lpSubtotal">
                                 <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                             </span>
                         </li>
                     </ul>
@@ -220,11 +220,11 @@
                 <div v-if="isFullSharedContent(sharedList)">
                     <div v-for="category in sharedList.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
                         <h4>
-                            {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                            {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
                         </h4>
                         <ul v-if="category.items && category.items.length">
                             <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
-                                {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit }}
+                                {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
                             </li>
                         </ul>
                         <p v-else>

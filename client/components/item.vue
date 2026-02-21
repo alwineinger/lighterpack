@@ -209,10 +209,13 @@ export default {
             }
         },
         saveWeight() {
-            const weightFloat = parseFloat(this.displayWeight, 10);
+            const weightFloat = weightUtils.ParseWeightInput(this.displayWeight, this.item.authorUnit);
 
             if (!isNaN(weightFloat)) {
-                this.item.weight = weightUtils.WeightToMg(weightFloat, this.item.authorUnit);
+                const nextWeight = weightUtils.WeightToMg(weightFloat, this.item.authorUnit);
+                if (typeof nextWeight !== 'undefined') {
+                    this.item.weight = nextWeight;
+                }
                 this.saveItem();
                 this.weightError = false;
             } else {
@@ -326,7 +329,9 @@ export default {
                 return;
             }
 
-            const newWeight = weightUtils.MgToWeight(this.item.weight, this.item.authorUnit) + 1;
+            const currentWeight = weightUtils.MgToWeightNumber(this.item.weight, this.item.authorUnit);
+            const step = this.item.authorUnit === 'lbs-oz' ? (1 / 16) : 1;
+            const newWeight = currentWeight + step;
             this.item.weight = weightUtils.WeightToMg(newWeight, this.item.authorUnit);
 
             this.saveItem();
@@ -338,7 +343,9 @@ export default {
                 return;
             }
 
-            const newWeight = weightUtils.MgToWeight(this.item.weight, this.item.authorUnit) - 1;
+            const currentWeight = weightUtils.MgToWeightNumber(this.item.weight, this.item.authorUnit);
+            const step = this.item.authorUnit === 'lbs-oz' ? (1 / 16) : 1;
+            const newWeight = currentWeight - step;
             this.item.weight = weightUtils.WeightToMg(newWeight, this.item.authorUnit);
 
             if (this.item.weight < 0) {

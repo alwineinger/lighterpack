@@ -12,6 +12,9 @@ const utilsMixin = {
         displayWeight(mg, unit) {
             return weightUtils.MgToWeight(mg, unit) || 0;
         },
+        displayUnit(unit) {
+            return unit === 'lbs-oz' ? '' : unit;
+        },
         displayPrice(price, symbol) {
             let amount = '0.00';
             if (typeof price === 'number') {

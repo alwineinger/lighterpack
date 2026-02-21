@@ -295,7 +295,7 @@
                 <span v-if="!item.url" class="lpName">{{ item.name }}</span>
                 <span class="lpWeight">
                     {{ item.weight | displayWeight(item.authorUnit) }}
-                    {{ item.authorUnit }}
+                    {{ item.authorUnit | displayUnit }}
                 </span>
                 <span class="lpDescription">
                     {{ item.description }}

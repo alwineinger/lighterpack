@@ -33,7 +33,7 @@
                 </span>
                 <span class="lpWeightCell lpNumber lpSubtotal">
                     <span class="lpDisplaySubtotal">{{ category.subtotalWeight | displayWeight(library.totalUnit) }}</span>
-                    <span class="lpSubtotalUnit">{{ library.totalUnit }}</span>
+                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
                 </span>
                 <span class="lpQtyCell lpSubtotal">
                     <span class="lpQtySubtotal">{{ category.subtotalQty }}</span>

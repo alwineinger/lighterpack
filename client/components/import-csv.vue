@@ -47,6 +47,7 @@
 
 <script>
 import modal from './modal.vue';
+const weightUtils = require('../utils/weight.js');
 
 export default {
     name: 'ImportCsv',
@@ -59,7 +60,22 @@ export default {
             listId: false,
             importData: {},
             fullUnitToUnit: {
-                ounce: 'oz', ounces: 'oz', oz: 'oz', pound: 'lb', pounds: 'lb', lb: 'lb', lbs: 'lb', gram: 'g', grams: 'g', g: 'g', kilogram: 'kg', kilograms: 'kg', kg: 'kg', kgs: 'kg',
+                ounce: 'oz',
+                ounces: 'oz',
+                oz: 'oz',
+                pound: 'lb',
+                pounds: 'lb',
+                lb: 'lb',
+                lbs: 'lb',
+                'lb-oz': 'lbs-oz',
+                'lbs-oz': 'lbs-oz',
+                gram: 'g',
+                grams: 'g',
+                g: 'g',
+                kilogram: 'kg',
+                kilograms: 'kg',
+                kg: 'kg',
+                kgs: 'kg',
             },
             shown: false,
         };
@@ -152,13 +168,14 @@ export default {
 
                 if (!itemName || itemName.toLowerCase() == 'item name') continue;
                 const qty = parseFloat(qtyRaw);
-                const weight = parseFloat(weightRaw);
-                if (Number.isNaN(qty) || Number.isNaN(weight)) continue;
+                if (Number.isNaN(qty)) continue;
 
                 const normalizedUnit = this.fullUnitToUnit[unitRaw] || unitRaw;
-                if (typeof this.fullUnitToUnit[unitRaw] === 'undefined' && ['oz', 'lb', 'g', 'kg'].indexOf(normalizedUnit) === -1) {
+                if (typeof this.fullUnitToUnit[unitRaw] === 'undefined' && ['oz', 'lb', 'lbs-oz', 'g', 'kg'].indexOf(normalizedUnit) === -1) {
                     continue;
                 }
+                const weight = weightUtils.ParseWeightInput(weightRaw, normalizedUnit);
+                if (Number.isNaN(weight)) continue;
 
                 this.importData.data.push({
                     name: itemName,
