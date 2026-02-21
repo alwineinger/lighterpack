@@ -79,7 +79,7 @@ $sidebarPadding: 20px;
 
             <libraryLists />
             <libraryTrips />
-            <libraryItems />
+            <libraryItems v-if="showGear" />
         </div>
     </div>
 </template>
@@ -95,6 +95,12 @@ export default {
         libraryItems,
         libraryLists,
         libraryTrips,
+    },
+    props: {
+        showGear: {
+            type: Boolean,
+            default: true,
+        },
     },
 };
 </script>
