@@ -250,7 +250,7 @@ router.get('/csv/:id', (req, res) => {
         const fullUnits = {
             oz: 'ounce', lb: 'pound', g: 'gram', kg: 'kilogram',
         };
-        let out = 'Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable\n';
+        let out = 'Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable,group\n';
 
         for (var i in list.categoryIds) {
             const category = library.getCategoryById(list.categoryIds[i]);
@@ -271,6 +271,7 @@ router.get('/csv/:id', (req, res) => {
                         itemRow.push(`${item.price}`);
                         itemRow.push(categoryItem.worn ? 'Worn' : '');
                         itemRow.push(categoryItem.consumable ? 'Consumable' : '');
+                        itemRow.push(categoryItem.group ? 'Group' : '');
 
                         for (const k in itemRow) {
                             const field = itemRow[k];

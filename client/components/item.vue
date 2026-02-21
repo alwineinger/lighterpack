@@ -8,18 +8,36 @@
         .lpRemove,
         .lpWorn,
         .lpConsumable,
+        .lpGroup,
         .lpCamera,
         .lpLink,
         .lpHandle,
         .lpArrows,
         .lpStar {
-            visibility: visible;
+            display: inline-block;
         }
     }
 
     input,
     select {
         padding: 3px;
+    }
+}
+
+.lpGroup {
+    cursor: pointer;
+    display: none;
+    font-size: 14px;
+    margin: 0;
+    opacity: 0.5;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    &.lpActive {
+        display: inline-block;
+        opacity: 1;
     }
 }
 
@@ -66,6 +84,7 @@
             <i class="lpSprite lpLink" :class="{lpActive: item.url}" title="Add a link for this item" @click="updateItemLink" />
             <i v-if="library.optionalFields['worn']" class="lpSprite lpWorn" :class="{lpActive: categoryItem.worn}" title="Mark this item as worn" @click="toggleWorn" />
             <i v-if="library.optionalFields['consumable']" class="lpSprite lpConsumable" :class="{lpActive: categoryItem.consumable}" title="Mark this item as a consumable" @click="toggleConsumable" />
+            <i v-if="library.optionalFields['group']" class="lpGroup" :class="{lpActive: categoryItem.group}" title="Mark this item as group gear" @click="toggleGroup">👥</i>
             <i :class="'lpSprite lpStar lpStar' + categoryItem.star" title="Star this item" @click="cycleStar" />
         </span>
         <span v-if="library.optionalFields['price']" class="lpPriceCell">
@@ -83,7 +102,7 @@
             </span>
         </span>
         <span class="lpRemoveCell">
-            <a class="lpRemove lpRemoveItem" title="Remove this item" @click="removeItem"><i class="lpSprite lpSpriteRemove" /></a>
+            <a class="lpRemove lpRemoveItem" title="Remove this item" @click.stop.prevent="removeItem"><i class="lpSprite lpSpriteRemove" /></a>
         </span>
     </li>
 </template>
@@ -233,6 +252,10 @@ export default {
             this.categoryItem.consumable = !this.categoryItem.consumable;
             this.saveCategoryItem();
         },
+        toggleGroup() {
+            this.categoryItem.group = !this.categoryItem.group;
+            this.saveCategoryItem();
+        },
         cycleStar() {
             if (!this.categoryItem.star) {
                 this.categoryItem.star = 0;
@@ -321,9 +344,10 @@ export default {
 
             this.saveItem();
         },
-        removeItem() {
+        removeItem(evt) {
+            evt.stopImmediatePropagation();
             this.$store.commit('removeItemFromCategory', { itemId: this.item.id, category: this.category });
         },
     },
 };
-</script>,
+</script>

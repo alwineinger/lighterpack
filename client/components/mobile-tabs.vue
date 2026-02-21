@@ -39,8 +39,8 @@
 
 <template>
     <div class="lpMobileTabs" aria-label="Primary mobile sections">
-        <span v-if="active === 'list'" class="lpMobileTabButton lpMobileTabButtonList isActive" :title="currentListLabel">{{ currentListLabel }}</span>
-        <router-link v-else class="lpMobileTabButton lpMobileTabButtonList" to="/" :title="currentListLabel">
+        <span v-if="active === 'list'" class="lpMobileTabButton lpMobileTabButtonList isActive" :aria-label="currentListLabel">{{ currentListLabel }}</span>
+        <router-link v-else class="lpMobileTabButton lpMobileTabButtonList" to="/" :aria-label="currentListLabel">
             {{ currentListLabel }}
         </router-link>
 
@@ -53,6 +53,11 @@
         <router-link v-else class="lpMobileTabButton" to="/gear">
             Gear
         </router-link>
+
+        <span v-if="active === 'trips'" class="lpMobileTabButton isActive">Trips</span>
+        <router-link v-else class="lpMobileTabButton" to="/trips">
+            Trips
+        </router-link>
     </div>
 </template>
 
@@ -64,7 +69,7 @@ export default {
             type: String,
             required: true,
             validator(value) {
-                return ['list', 'lists', 'gear'].indexOf(value) > -1;
+                return ['list', 'lists', 'gear', 'trips'].indexOf(value) > -1;
             },
         },
     },

@@ -372,6 +372,8 @@
 .lpLibraryList:hover .lpRemove,
 .lpCategory .lpHeader:hover .lpRemove,
 .lpLibraryItem:hover .lpRemove,
+.lpItem:hover .lpRemove,
+.lpItem:hover .lpHandle,
 .lpLibraryItem:hover .lpHandle,
 .lpCategory .lpHeader:hover .lpHandle {
     visibility: visible;

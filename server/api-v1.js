@@ -10,7 +10,7 @@ const { logWithRequest } = require('./log.js');
 const Library = dataTypes.Library;
 
 const router = express.Router();
-const db = mongojs(config.get('databaseUrl'), ['users']);
+const db = mongojs(config.get('databaseUrl'), ['users', 'trips']);
 
 function apiError(res, status, code, message, details) {
     return res.status(status).json({
@@ -41,6 +41,124 @@ function withAuthenticatedUser(req, res, handler) {
     });
 }
 
+function parseObjectId(value) {
+    try {
+        return mongojs.ObjectId(value);
+    } catch (err) {
+        return null;
+    }
+}
+
+function trimLower(value) {
+    return String(value || '').toLowerCase().trim();
+}
+
+function normalizeTripRole(role) {
+    if (role === 'viewer') return 'viewer';
+    return 'editor';
+}
+
+function canManageTrip(trip, user) {
+    return trip.ownerUserId === user._id.toString();
+}
+
+function userTripRole(trip, user) {
+    if (trip.ownerUserId === user._id.toString()) {
+        return 'owner';
+    }
+    const member = (trip.members || []).find((candidate) => candidate.userId === user._id.toString());
+    return member ? member.role : null;
+}
+
+function canEditTrip(trip, user) {
+    const role = userTripRole(trip, user);
+    return role === 'owner' || role === 'editor';
+}
+
+function buildTripSummary(trip, user) {
+    return {
+        id: trip._id.toString(),
+        name: trip.name,
+        role: userTripRole(trip, user),
+        ownerUserId: trip.ownerUserId,
+        updatedAt: trip.updatedAt,
+    };
+}
+
+function getUserById(userId, callback) {
+    db.users.find({ _id: parseObjectId(userId) }, (err, users) => {
+        if (err) return callback(err);
+        callback(null, users[0] || null);
+    });
+}
+
+function normalizeVisibility(visibility) {
+    return visibility === 'summary' ? 'summary' : 'full';
+}
+
+function normalizeMemberSharedLists(member) {
+    const seen = {};
+    const normalized = [];
+    const sourceLists = Array.isArray(member && member.sharedLists) && member.sharedLists.length
+        ? member.sharedLists
+        : [{
+            listId: member && member.listId,
+            visibility: member && member.visibility,
+        }];
+
+    sourceLists.forEach((sharedList) => {
+        const listId = parseInt(sharedList && sharedList.listId, 10);
+        if (Number.isNaN(listId) || seen[listId]) {
+            return;
+        }
+        seen[listId] = true;
+        normalized.push({
+            listId,
+            visibility: normalizeVisibility(sharedList && sharedList.visibility),
+        });
+    });
+
+    return normalized;
+}
+
+function withLegacyMemberSharedFields(member) {
+    const sharedLists = normalizeMemberSharedLists(member);
+    const primary = sharedLists[0] || null;
+    return {
+        ...member,
+        sharedLists,
+        listId: primary ? primary.listId : null,
+        visibility: primary ? primary.visibility : 'full',
+    };
+}
+
+function getSharedListsForMember(member, callback) {
+    if (!member || !member.userId) {
+        return callback(null, null);
+    }
+    getUserById(member.userId, (err, memberUser) => {
+        if (err || !memberUser) {
+            return callback(err, null);
+        }
+        const library = new Library();
+        library.load(memberUser.library || new Library().save());
+        const sharedLists = normalizeMemberSharedLists(member)
+            .map((selection) => {
+                const list = library.getListById(selection.listId);
+                if (!list) {
+                    return null;
+                }
+                return {
+                    list,
+                    listId: selection.listId,
+                    visibility: selection.visibility,
+                };
+            })
+            .filter((selection) => !!selection);
+        return callback(null, { memberUser, library, sharedLists });
+    });
+}
+
 function loadLibraryForUser(user) {
     const library = new Library();
     library.load(user.library || new Library().save());
@@ -51,6 +169,89 @@ function saveLibraryForUser(user, library, callback) {
     user.library = library.save();
     user.libraryMeta.updatedAt = new Date().toISOString();
     db.users.save(user, callback);
+}
+
+function buildMemberSharedContent(library, list, visibility) {
+    const isSummary = visibility === 'summary';
+    const categorySummaries = [];
+    const fullItems = [];
+    let totalWeightMg = 0;
+    let totalWornWeightMg = 0;
+    let totalConsumableWeightMg = 0;
+    let totalItemCount = 0;
+
+    list.categoryIds.forEach((categoryId) => {
+        const category = library.getCategoryById(categoryId);
+        if (!category) return;
+
+        let categoryWeightMg = 0;
+        let categoryItemCount = 0;
+        const categoryItems = [];
+
+        category.categoryItems.forEach((categoryItem) => {
+            const item = library.getItemById(categoryItem.itemId);
+            if (!item) return;
+            const weightMg = item.weight * categoryItem.qty;
+            categoryWeightMg += weightMg;
+            categoryItemCount += 1;
+            totalWeightMg += weightMg;
+            totalItemCount += 1;
+            if (categoryItem.worn) {
+                totalWornWeightMg += item.weight;
+            }
+            if (categoryItem.consumable) {
+                totalConsumableWeightMg += weightMg;
+            }
+
+            const sharedItem = {
+                itemId: item.id,
+                categoryId: category.id,
+                categoryName: category.name,
+                name: item.name,
+                qty: categoryItem.qty,
+                weightMg,
+                group: !!categoryItem.group,
+            };
+
+            if (!isSummary) {
+                categoryItems.push(sharedItem);
+                fullItems.push(sharedItem);
+            }
+        });
+
+        categorySummaries.push({
+            categoryId: category.id,
+            categoryName: category.name,
+            categoryColor: category.displayColor || null,
+            itemCount: categoryItemCount,
+            totalWeightMg: categoryWeightMg,
+            items: categoryItems.sort((a, b) => b.weightMg - a.weightMg),
+        });
+    });
+
+    const sortedCategories = categorySummaries.sort((a, b) => b.totalWeightMg - a.totalWeightMg);
+    const totals = {
+        totalWeightMg,
+        totalWornWeightMg,
+        totalConsumableWeightMg,
+        totalBaseWeightMg: totalWeightMg - (totalWornWeightMg + totalConsumableWeightMg),
+        totalItemCount,
+    };
+
+    if (isSummary) {
+        return {
+            mode: 'summary',
+            categories: sortedCategories,
+            totals,
+        };
+    }
+
+    return {
+        mode: 'full',
+        categories: sortedCategories,
+        items: fullItems.sort((a, b) => b.weightMg - a.weightMg),
+        totals,
+    };
 }
 
 router.get('/api/v1/session', (req, res) => {
@@ -161,6 +362,406 @@ router.put('/api/v1/library', (req, res) => {
                 updatedAt: user.libraryMeta.updatedAt,
             },
         }));
+    });
+});
+
+router.get('/api/v1/trips', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        db.trips.find({
+            $or: [
+                { ownerUserId: user._id.toString() },
+                { 'members.userId': user._id.toString() },
+                { 'invitations.email': trimLower(user.email) },
+            ],
+        }, (err, trips) => {
+            if (err) {
+                return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to load trips.');
+            }
+            const out = (trips || []).map((trip) => buildTripSummary(trip, user));
+            return res.status(200).json({ data: out });
+        });
+    });
+});
+
+router.post('/api/v1/trips', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const name = String(req.body.name || '').trim();
+        if (!name) {
+            return apiError(res, 400, 'INVALID_TRIP_NAME', 'Trip name is required.');
+        }
+        const trip = {
+            name,
+            notes: '',
+            ownerUserId: user._id.toString(),
+            members: [{
+                userId: user._id.toString(),
+                username: user.username,
+                email: trimLower(user.email),
+                role: 'owner',
+                sharedLists: [{
+                    listId: user.library && user.library.defaultListId,
+                    visibility: 'full',
+                }],
+                listId: user.library && user.library.defaultListId,
+                visibility: 'full',
+            }],
+            invitations: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        db.trips.save(trip, (err, saved) => {
+            if (err) {
+                return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to create trip.');
+            }
+            return res.status(201).json({ data: buildTripSummary(saved, user) });
+        });
+    });
+});
+
+router.post('/api/v1/trips/:tripId/invitations', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+            const trip = trips[0];
+            if (!canManageTrip(trip, user)) {
+                return apiError(res, 403, 'FORBIDDEN', 'Only owner can invite users.');
+            }
+            const email = trimLower(req.body.email);
+            if (!email) {
+                return apiError(res, 400, 'INVALID_EMAIL', 'Email is required.');
+            }
+            const role = normalizeTripRole(req.body.role);
+            const invite = {
+                token: generate('1234567890abcdefghijklmnopqrstuvwxyz', 24),
+                email,
+                role,
+                createdAt: new Date().toISOString(),
+            };
+            trip.invitations = trip.invitations || [];
+            trip.invitations.push(invite);
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to save invitation.');
+                }
+                return res.status(201).json({ data: invite });
+            });
+        });
+    });
+});
+
+router.post('/api/v1/trips/:tripId/accept', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+            const trip = trips[0];
+            const inviteToken = String(req.body.inviteToken || '').trim();
+            const invitation = (trip.invitations || []).find((invite) => invite.token === inviteToken && invite.email === trimLower(user.email));
+            if (!invitation) {
+                return apiError(res, 404, 'INVITE_NOT_FOUND', 'Invitation not found.');
+            }
+            const library = loadLibraryForUser(user);
+            const listId = parseInt(req.body.listId, 10);
+            const list = library.getListById(listId);
+            if (!list) {
+                return apiError(res, 400, 'INVALID_LIST', 'Selected list does not exist.');
+            }
+            trip.members = trip.members || [];
+            trip.members = trip.members.filter((member) => member.userId !== user._id.toString());
+            trip.members.push({
+                userId: user._id.toString(),
+                username: user.username,
+                email: trimLower(user.email),
+                role: invitation.role,
+                sharedLists: [{
+                    listId,
+                    visibility: normalizeVisibility(req.body.visibility),
+                }],
+                listId,
+                visibility: normalizeVisibility(req.body.visibility),
+            });
+            trip.invitations = trip.invitations.filter((invite) => invite.token !== inviteToken);
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to accept invitation.');
+                }
+                return res.status(200).json({ data: { accepted: true } });
+            });
+        });
+    });
+});
+
+router.put('/api/v1/trips/:tripId/member-list', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            const memberIndex = (trip.members || []).findIndex((member) => member.userId === user._id.toString());
+            if (memberIndex === -1) {
+                return apiError(res, 403, 'FORBIDDEN', 'No access to update this trip membership.');
+            }
+
+            const library = loadLibraryForUser(user);
+            const listId = parseInt(req.body.listId, 10);
+            const list = library.getListById(listId);
+            if (!list) {
+                return apiError(res, 400, 'INVALID_LIST', 'Selected list does not exist.');
+            }
+
+            const visibility = normalizeVisibility(req.body.visibility);
+            const remove = req.body.remove === true;
+            const previousListId = parseInt(req.body.previousListId, 10);
+            const sharedLists = normalizeMemberSharedLists(trip.members[memberIndex]);
+            const targetListId = Number.isNaN(previousListId) ? listId : previousListId;
+            const existingIndex = sharedLists.findIndex((sharedList) => sharedList.listId === targetListId);
+            if (remove) {
+                if (existingIndex > -1) {
+                    sharedLists.splice(existingIndex, 1);
+                }
+            } else if (existingIndex > -1) {
+                sharedLists[existingIndex] = {
+                    ...sharedLists[existingIndex],
+                    listId,
+                    visibility,
+                };
+            } else {
+                sharedLists.push({ listId, visibility });
+            }
+
+            trip.members[memberIndex] = withLegacyMemberSharedFields({
+                ...trip.members[memberIndex],
+                sharedLists,
+            });
+
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update shared list.');
+                }
+                return res.status(200).json({
+                    data: {
+                        listId,
+                        visibility,
+                        sharedLists,
+                    },
+                });
+            });
+        });
+    });
+});
+
+router.put('/api/v1/trips/:tripId/name', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            if (!canManageTrip(trip, user)) {
+                return apiError(res, 403, 'FORBIDDEN', 'Only owner can rename trip.');
+            }
+
+            const name = String(req.body.name || '').trim();
+            if (!name) {
+                return apiError(res, 400, 'INVALID_TRIP_NAME', 'Trip name is required.');
+            }
+
+            trip.name = name;
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update trip name.');
+                }
+                return res.status(200).json({
+                    data: {
+                        name: trip.name,
+                    },
+                });
+            });
+        });
+    });
+});
+
+router.put('/api/v1/trips/:tripId/notes', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+
+            const trip = trips[0];
+            if (!canEditTrip(trip, user)) {
+                return apiError(res, 403, 'FORBIDDEN', 'No access to edit trip notes.');
+            }
+
+            const notes = req.body.notes === undefined ? '' : String(req.body.notes);
+            trip.notes = notes;
+            trip.updatedAt = new Date().toISOString();
+            db.trips.save(trip, (saveErr) => {
+                if (saveErr) {
+                    return apiError(res, 500, 'INTERNAL_ERROR', 'Unable to update trip notes.');
+                }
+                return res.status(200).json({
+                    data: {
+                        notes: trip.notes,
+                    },
+                });
+            });
+        });
+    });
+});
+
+router.get('/api/v1/trips/:tripId', (req, res) => {
+    withAuthenticatedUser(req, res, (user) => {
+        const tripObjectId = parseObjectId(req.params.tripId);
+        if (!tripObjectId) {
+            return apiError(res, 400, 'INVALID_TRIP_ID', 'Trip id is invalid.');
+        }
+        db.trips.find({ _id: tripObjectId }, (err, trips) => {
+            if (err || !trips.length) {
+                return apiError(res, 404, 'TRIP_NOT_FOUND', 'Trip not found.');
+            }
+            const trip = trips[0];
+            const role = userTripRole(trip, user);
+            const pendingInvitation = (trip.invitations || []).find((invite) => invite.email === trimLower(user.email));
+            if (!role && !pendingInvitation) {
+                return apiError(res, 403, 'FORBIDDEN', 'No access to this trip.');
+            }
+
+            const members = [];
+            const groupGearByUser = [];
+            let pending = trip.members ? trip.members.length : 0;
+            if (!pending) {
+                return res.status(200).json({
+                    data: {
+                        id: trip._id.toString(),
+                        name: trip.name,
+                        notes: trip.notes || '',
+                        canManage: canManageTrip(trip, user),
+                        currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
+                        pendingInvitation,
+                        members,
+                        totalUnit: 'oz',
+                        groupGearByUser,
+                    },
+                });
+            }
+
+            trip.members.forEach((member) => {
+                getSharedListsForMember(member, (memberErr, payload) => {
+                    pending -= 1;
+                    if (!memberErr && payload) {
+                        const { library, sharedLists } = payload;
+                        const hydratedSharedLists = sharedLists.map((selection) => {
+                            selection.list.calculateTotals();
+                            return {
+                                listId: selection.listId,
+                                visibility: selection.visibility,
+                                listName: selection.list.name,
+                                totalWeight: selection.list.totalWeight,
+                                sharedContent: buildMemberSharedContent(library, selection.list, selection.visibility),
+                            };
+                        });
+
+                        members.push({
+                            userId: member.userId,
+                            username: member.username,
+                            email: member.email,
+                            role: member.role,
+                            sharedLists: hydratedSharedLists,
+                        });
+
+                        hydratedSharedLists.forEach((sharedList) => {
+                            const list = library.getListById(sharedList.listId);
+                            if (!list) {
+                                return;
+                            }
+
+                            const groupItems = [];
+                            list.categoryIds.forEach((categoryId) => {
+                                const category = library.getCategoryById(categoryId);
+                                if (!category) return;
+                                category.categoryItems.forEach((categoryItem) => {
+                                    if (!categoryItem.group) return;
+                                    const item = library.getItemById(categoryItem.itemId);
+                                    if (!item) return;
+                                    groupItems.push({
+                                        itemId: item.id,
+                                        categoryId: category.id,
+                                        listId: sharedList.listId,
+                                        name: item.name,
+                                        categoryName: category.name,
+                                        qty: categoryItem.qty,
+                                        weightMg: item.weight * categoryItem.qty,
+                                    });
+                                });
+                            });
+                            const totalWeightMg = groupItems.reduce((sum, item) => sum + item.weightMg, 0);
+                            const memberName = member.username || member.email;
+                            const listName = sharedList.listName || `List #${sharedList.listId}`;
+
+                            groupGearByUser.push({
+                                userKey: `${member.userId}:${sharedList.listId}`,
+                                userId: member.userId,
+                                listId: sharedList.listId,
+                                label: `${listName} (${memberName})`,
+                                items: groupItems.sort((a, b) => b.weightMg - a.weightMg).map((item) => ({ ...item, weightDisplay: (item.weightMg / 28349.5).toFixed(2) })),
+                                totalWeightMg,
+                                totalWeightDisplay: (totalWeightMg / 28349.5).toFixed(2),
+                            });
+                        });
+                    }
+                    if (!pending) {
+                        groupGearByUser.sort((a, b) => b.totalWeightMg - a.totalWeightMg);
+                        return res.status(200).json({
+                            data: {
+                                id: trip._id.toString(),
+                                name: trip.name,
+                                notes: trip.notes || '',
+                                canManage: canManageTrip(trip, user),
+                                currentUserMember: withLegacyMemberSharedFields((trip.members || []).find((member) => member.userId === user._id.toString()) || {}),
+                                pendingInvitation,
+                                members,
+                                totalUnit: 'oz',
+                                groupGearByUser,
+                            },
+                        });
+                    }
+                });
+            });
+        });
     });
 });
 

@@ -78,6 +78,9 @@ module.exports = {
         alias: {
             vue$: 'vue/dist/vue.esm.js',
         },
+        fallback: {
+            util: require.resolve('util/'),
+        },
     },
     performance: {
         hints: false,

@@ -6,6 +6,8 @@ import forgotPassword from './views/forgot-password.vue';
 import moderation from './views/moderation.vue';
 import mobileLists from './views/mobile-lists.vue';
 import mobileGear from './views/mobile-gear.vue';
+import mobileTrips from './views/mobile-trips.vue';
+import trip from './views/trip.vue';
 
 export default [
     { path: '/', component: dashboard },
@@ -17,6 +19,8 @@ export default [
     { path: '/forgot-password', component: forgotPassword },
     { path: '/lists', component: mobileLists },
     { path: '/gear', component: mobileGear },
+    { path: '/trips', component: mobileTrips },
+    { path: '/trips/:tripId', component: trip },
     { path: '/moderation', component: moderation },
     { path: '*', component: dashboard },
 ];
