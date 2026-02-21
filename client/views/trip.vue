@@ -2,244 +2,242 @@
     <div v-if="trip" id="main" :class="{lpHasSidebar: library.showSidebar}">
         <sidebar :show-gear="false" />
         <div class="lpList lpTransition lpTripView">
-            <div class="lpTripHeader">
-                <a id="hamburger" class="lpTransition" @click="toggleSidebar">
-                    <i class="lpSprite lpHamburger" />
-                </a>
-                <div class="lpTripTitleWrap">
-                    <h1>{{ trip.name }}</h1>
-                    <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
-                        Rename trip
+            <mobileTabs v-if="showCompactTabs" active="trips" />
+            <div id="header" class="clearfix">
+                <span v-if="!showCompactTabs" class="headerItem">
+                    <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
+                </span>
+                <input
+                    id="lpListName"
+                    v-model="tripNameDraft"
+                    type="text"
+                    class="lpListName lpSilent headerItem"
+                    placeholder="Trip Name"
+                    autocomplete="off"
+                    name="lastpass-disable-search"
+                    maxlength="100"
+                    :readonly="!canRenameTrip"
+                    @input="onTripNameInput"
+                    @blur="saveTripName"
+                    @keyup.enter="$event.target.blur()"
+                >
+                <share />
+                <listSettings />
+                <accountDropdown v-if="isSignedIn" />
+                <span v-else class="headerItem signInRegisterButtons">
+                    <router-link to="/register" class="lpButton lpSmall">Register</router-link>
+                    or
+                    <router-link to="/signin" class="lpButton lpSmall">Sign In</router-link>
+                </span>
+                <span class="clearfix" />
+            </div>
+
+            <div class="lpTripNotes">
+                <div class="lpTripSectionHeader">
+                    <h2>Trip Notes</h2>
+                    <button v-if="canEditTripNotes && !isEditingTripNotes" class="lpButton lpSmall" @click="startEditingTripNotes">
+                        Edit notes
                     </button>
                 </div>
-            </div>
-
-        <modal id="renameTripDialog" :shown="isRenameTripDialogShown" @hide="cancelEditingTripName">
-            <h2>Rename trip</h2>
-            <input
-                ref="renameTripInput"
-                v-model="tripNameDraft"
-                type="text"
-                class="lpTripRenameInput"
-                maxlength="100"
-                @keyup.enter="saveTripName"
-            >
-            <div class="lpTripRenameActions">
-                <button class="lpButton lpSmall" @click="saveTripName">
-                    Save
-                </button>
-                <button class="lpButton lpSmall" @click="cancelEditingTripName">
-                    Cancel
-                </button>
-            </div>
-        </modal>
-
-        <div class="lpTripNotes">
-            <div class="lpTripSectionHeader">
-                <h2>Trip Notes</h2>
-                <button v-if="canEditTripNotes && !isEditingTripNotes" class="lpButton lpSmall" @click="startEditingTripNotes">
-                    Edit notes
-                </button>
-            </div>
-            <div v-if="isEditingTripNotes">
-                <p>
-                    <a href="https://guides.github.com/features/mastering-markdown/" target="_blank" class="lpHref">Markdown</a> supported.
-                </p>
-                <textarea
-                    v-model="tripNotesDraft"
-                    class="lpTripNotesInput"
-                    placeholder="Add trip notes, reminders, or itinerary details"
-                />
-                <div class="lpTripNotesActions">
-                    <button class="lpButton lpSmall" @click="saveTripNotes">
-                        Save notes
-                    </button>
-                    <button class="lpButton lpSmall" @click="cancelEditingTripNotes">
-                        Cancel
-                    </button>
+                <div v-if="isEditingTripNotes">
+                    <p>
+                        <a href="https://guides.github.com/features/mastering-markdown/" target="_blank" class="lpHref">Markdown</a> supported.
+                    </p>
+                    <textarea
+                        v-model="tripNotesDraft"
+                        class="lpTripNotesInput"
+                        placeholder="Add trip notes, reminders, or itinerary details"
+                    />
+                    <div class="lpTripNotesActions">
+                        <button class="lpButton lpSmall" @click="saveTripNotes">
+                            Save notes
+                        </button>
+                        <button class="lpButton lpSmall" @click="cancelEditingTripNotes">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div v-else-if="hasTripNotes" class="lpTripNotesContent" v-html="renderedTripNotes" />
-            <p v-else class="lpTripNotesEmpty">
-                No trip notes yet.
-            </p>
-        </div>
-
-        <h2>Group Gear</h2>
-        <div class="lpListSummary lpTripSummary">
-            <div class="lpChartContainer">
-                <canvas ref="chartCanvas" class="lpChart" height="260" width="260" />
-            </div>
-            <div class="lpTotalsContainer">
-                <ul class="lpTotals lpTable lpDataTable">
-                    <li class="lpRow lpHeader">
-                        <span class="lpCell">&nbsp;</span>
-                        <span class="lpCell">User</span>
-                        <span class="lpCell">Weight</span>
-                    </li>
-                    <li v-for="group in sortedGroups" :key="group.userKey" class="lpRow lpTotalCategory">
-                        <span class="lpCell lpLegendCell">
-                            <colorPicker :color="groupColorHex(group)" @colorChange="updateGroupColor(group, $event)" />
-                        </span>
-                        <span class="lpCell">{{ group.label }}</span>
-                        <span class="lpCell lpNumber">
-                            {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
-                        </span>
-                    </li>
-                    <li class="lpRow lpFooter lpTotal">
-                        <span class="lpCell" />
-                        <span class="lpCell lpSubtotal">Total</span>
-                        <span class="lpCell lpNumber lpSubtotal">
-                            {{ totalGroupWeightMg | displayWeight(library.totalUnit) }}
-                            <unitSelect class="lpTotalUnitSelect" :unit="library.totalUnit" :on-change="setTotalUnit" />
-                        </span>
-                    </li>
-                </ul>
-                <p class="lpTripChartHint">
-                    Click a list slice to break out individual group items.
+                <div v-else-if="hasTripNotes" class="lpTripNotesContent" v-html="renderedTripNotes" />
+                <p v-else class="lpTripNotesEmpty">
+                    No trip notes yet.
                 </p>
             </div>
-        </div>
 
-        <div v-for="group in groupGearByUserView" :key="group.userKey" class="lpTripGroupPanel">
-            <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}</h3>
-            <ul>
-                <li v-for="item in group.items" :key="item.itemId + '-' + item.categoryId">
-                    {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
-                </li>
-            </ul>
-        </div>
-
-        <div class="lpTripSectionHeader lpTripSharedListsSection">
-            <h2>Shared lists</h2>
-            <div v-if="trip.canManage" class="lpTripInvite">
-                <input v-model="invite.email" type="email" placeholder="Invite email">
-                <select v-model="invite.role">
-                    <option value="editor">
-                        Editor
-                    </option>
-                    <option value="viewer">
-                        Viewer
-                    </option>
-                </select>
-                <button class="lpButton lpSmall" @click="sendInvite">
-                    Invite
-                </button>
-            </div>
-            <div v-if="currentUserListChoices.length" class="lpTripListSelector">
-                <div v-for="sharedList in currentUserSharedLists" :key="'my-shared-list-' + sharedList.listId" class="lpTripSharedListRow">
-                    <label>Your list:</label>
-                    <select :value="sharedList.listId" @change="onSharedListChange(sharedList.listId, $event)">
-                        <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
-                            {{ list.name }}
-                        </option>
-                    </select>
-                    <label>Share level:</label>
-                    <select :value="sharedList.visibility" @change="onVisibilityChange(sharedList.listId, $event)">
-                        <option value="summary">
-                            Summary
-                        </option>
-                        <option value="full">
-                            All items
-                        </option>
-                    </select>
-                    <button class="lpButton lpSmall" @click="removeSharedList(sharedList.listId)">
-                        Remove
-                    </button>
+            <h2>Group Gear</h2>
+            <div class="lpListSummary lpTripSummary">
+                <div class="lpChartContainer">
+                    <canvas ref="chartCanvas" class="lpChart" height="260" width="260" />
                 </div>
-                <button v-if="availableListOptionsForShare.length" class="lpButton lpSmall" @click="addSharedList">
-                    Add list
-                </button>
-            </div>
-        </div>
-
-        <div class="lpTripSectionHeader">
-            <h2>Shared content</h2>
-        </div>
-        <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
-            <h3>{{ member.username || member.email }}</h3>
-            <div
-                v-for="sharedList in member.sharedLists || []"
-                :key="(member.userId || member.email) + '-shared-' + sharedList.listId"
-                class="lpTripMemberSharedList"
-            >
-                <h4>{{ sharedList.listName || 'No shared list' }} ({{ sharedList.visibility }})</h4>
-                <div v-if="sharedList.sharedContent && sharedList.sharedContent.categories && sharedList.sharedContent.categories.length" class="lpTripSharedSummary">
+                <div class="lpTotalsContainer">
                     <ul class="lpTotals lpTable lpDataTable">
                         <li class="lpRow lpHeader">
                             <span class="lpCell">&nbsp;</span>
-                            <span class="lpCell">Category</span>
+                            <span class="lpCell">User</span>
                             <span class="lpCell">Weight</span>
                         </li>
-                        <li v-for="category in sharedList.sharedContent.categories" :key="category.categoryId" class="lpTotalCategory lpRow">
+                        <li v-for="group in sortedGroups" :key="group.userKey" class="lpRow lpTotalCategory">
                             <span class="lpCell lpLegendCell">
-                                <span class="lpLegend" :style="{ 'background-color': category.categoryColor || '#999' }" />
+                                <colorPicker :color="groupColorHex(group)" @colorChange="updateGroupColor(group, $event)" />
                             </span>
-                            <span class="lpCell">
-                                {{ category.categoryName }}
-                            </span>
+                            <span class="lpCell">{{ group.label }}</span>
                             <span class="lpCell lpNumber">
-                                <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
                             </span>
                         </li>
                         <li class="lpRow lpFooter lpTotal">
                             <span class="lpCell" />
-                            <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">Total</span>
-                            <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">
-                                <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
-                            </span>
-                        </li>
-                        <li v-if="getSharedConsumableWeight(sharedList) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
-                            <span class="lpCell" />
-                            <span class="lpCell lpSubtotal">Consumable</span>
+                            <span class="lpCell lpSubtotal">Total</span>
                             <span class="lpCell lpNumber lpSubtotal">
-                                <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
-                            </span>
-                        </li>
-                        <li v-if="getSharedWornWeight(sharedList) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
-                            <span class="lpCell" />
-                            <span class="lpCell lpSubtotal">Worn</span>
-                            <span class="lpCell lpNumber lpSubtotal">
-                                <span class="lpDisplaySubtotal">{{ getSharedWornWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
-                            </span>
-                        </li>
-                        <li v-if="getSharedBaseWeight(sharedList) !== getSharedTotalWeight(sharedList)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
-                            <span class="lpCell" />
-                            <span class="lpCell lpSubtotal">Base Weight</span>
-                            <span class="lpCell lpNumber lpSubtotal">
-                                <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
-                                <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                {{ totalGroupWeightMg | displayWeight(library.totalUnit) }}
+                                <unitSelect class="lpTotalUnitSelect" :unit="library.totalUnit" :on-change="setTotalUnit" />
                             </span>
                         </li>
                     </ul>
+                    <p class="lpTripChartHint">
+                        Click a list slice to break out individual group items.
+                    </p>
                 </div>
-                <div v-if="isFullSharedContent(sharedList)">
-                    <div v-for="category in sharedList.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
-                        <h4>
-                            {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
-                        </h4>
-                        <ul v-if="category.items && category.items.length">
-                            <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
-                                {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
+            </div>
+
+            <div v-for="group in groupGearByUserView" :key="group.userKey" class="lpTripGroupPanel">
+                <h3>{{ group.label }} — {{ group.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}</h3>
+                <ul>
+                    <li v-for="item in group.items" :key="item.itemId + '-' + item.categoryId">
+                        {{ item.name }} ({{ item.categoryName }}) × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
+                    </li>
+                </ul>
+            </div>
+
+            <div class="lpTripSectionHeader lpTripSharedListsSection">
+                <h2>Shared lists</h2>
+                <div v-if="trip.canManage" class="lpTripInvite">
+                    <input v-model="invite.email" type="email" placeholder="Invite email">
+                    <select v-model="invite.role">
+                        <option value="editor">
+                            Editor
+                        </option>
+                        <option value="viewer">
+                            Viewer
+                        </option>
+                    </select>
+                    <button class="lpButton lpSmall" @click="sendInvite">
+                        Invite
+                    </button>
+                </div>
+                <div v-if="currentUserListChoices.length" class="lpTripListSelector">
+                    <div v-for="sharedList in currentUserSharedLists" :key="'my-shared-list-' + sharedList.listId" class="lpTripSharedListRow">
+                        <label>Your list:</label>
+                        <select :value="sharedList.listId" @change="onSharedListChange(sharedList.listId, $event)">
+                            <option v-for="list in currentUserListChoices" :key="list.id" :value="list.id">
+                                {{ list.name }}
+                            </option>
+                        </select>
+                        <label>Share level:</label>
+                        <select :value="sharedList.visibility" @change="onVisibilityChange(sharedList.listId, $event)">
+                            <option value="summary">
+                                Summary
+                            </option>
+                            <option value="full">
+                                All items
+                            </option>
+                        </select>
+                        <button class="lpButton lpSmall" @click="removeSharedList(sharedList.listId)">
+                            Remove
+                        </button>
+                    </div>
+                    <button v-if="availableListOptionsForShare.length" class="lpButton lpSmall" @click="addSharedList">
+                        Add list
+                    </button>
+                </div>
+            </div>
+
+            <div class="lpTripSectionHeader">
+                <h2>Shared content</h2>
+            </div>
+            <div v-for="member in sortedMembers" :key="member.userId || member.email" class="lpTripGroupPanel">
+                <h3>{{ member.username || member.email }}</h3>
+                <div
+                    v-for="sharedList in member.sharedLists || []"
+                    :key="(member.userId || member.email) + '-shared-' + sharedList.listId"
+                    class="lpTripMemberSharedList"
+                >
+                    <h4>{{ sharedList.listName || 'No shared list' }} ({{ sharedList.visibility }})</h4>
+                    <div v-if="sharedList.sharedContent && sharedList.sharedContent.categories && sharedList.sharedContent.categories.length" class="lpTripSharedSummary">
+                        <ul class="lpTotals lpTable lpDataTable">
+                            <li class="lpRow lpHeader">
+                                <span class="lpCell">&nbsp;</span>
+                                <span class="lpCell">Category</span>
+                                <span class="lpCell">Weight</span>
+                            </li>
+                            <li v-for="category in sharedList.sharedContent.categories" :key="category.categoryId" class="lpTotalCategory lpRow">
+                                <span class="lpCell lpLegendCell">
+                                    <span class="lpLegend" :style="{ 'background-color': category.categoryColor || '#999' }" />
+                                </span>
+                                <span class="lpCell">
+                                    {{ category.categoryName }}
+                                </span>
+                                <span class="lpCell lpNumber">
+                                    <span class="lpDisplaySubtotal">{{ category.totalWeightMg | displayWeight(library.totalUnit) }}</span>
+                                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                </span>
+                            </li>
+                            <li class="lpRow lpFooter lpTotal">
+                                <span class="lpCell" />
+                                <span class="lpCell lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">Total</span>
+                                <span class="lpCell lpNumber lpSubtotal" :title="getSharedTotalItemCount(sharedList) + ' items'">
+                                    <span class="lpDisplaySubtotal">{{ getSharedTotalWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                </span>
+                            </li>
+                            <li v-if="getSharedConsumableWeight(sharedList) > 0" data-weight-type="consumable" class="lpRow lpFooter lpBreakdown lpConsumableWeight">
+                                <span class="lpCell" />
+                                <span class="lpCell lpSubtotal">Consumable</span>
+                                <span class="lpCell lpNumber lpSubtotal">
+                                    <span class="lpDisplaySubtotal">{{ getSharedConsumableWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                </span>
+                            </li>
+                            <li v-if="getSharedWornWeight(sharedList) > 0" data-weight-type="worn" class="lpRow lpFooter lpBreakdown lpWornWeight">
+                                <span class="lpCell" />
+                                <span class="lpCell lpSubtotal">Worn</span>
+                                <span class="lpCell lpNumber lpSubtotal">
+                                    <span class="lpDisplaySubtotal">{{ getSharedWornWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                </span>
+                            </li>
+                            <li v-if="getSharedBaseWeight(sharedList) !== getSharedTotalWeight(sharedList)" data-weight-type="base" class="lpRow lpFooter lpBreakdown lpPackWeight">
+                                <span class="lpCell" />
+                                <span class="lpCell lpSubtotal">Base Weight</span>
+                                <span class="lpCell lpNumber lpSubtotal">
+                                    <span class="lpDisplaySubtotal">{{ getSharedBaseWeight(sharedList) | displayWeight(library.totalUnit) }}</span>
+                                    <span class="lpSubtotalUnit">{{ library.totalUnit | displayUnit }}</span>
+                                </span>
                             </li>
                         </ul>
-                        <p v-else>
-                            No items in this category.
-                        </p>
                     </div>
+                    <div v-if="isFullSharedContent(sharedList)">
+                        <div v-for="category in sharedList.sharedContent.categories" :key="'items-' + category.categoryId" class="lpTripSharedCategoryItems">
+                            <h4>
+                                {{ category.categoryName }} — {{ category.totalWeightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
+                            </h4>
+                            <ul v-if="category.items && category.items.length">
+                                <li v-for="item in category.items" :key="item.itemId + '-' + item.categoryId + '-' + item.name">
+                                    {{ item.name }} × {{ item.qty }} — {{ item.weightMg | displayWeight(library.totalUnit) }} {{ library.totalUnit | displayUnit }}
+                                </li>
+                            </ul>
+                            <p v-else>
+                                No items in this category.
+                            </p>
+                        </div>
+                    </div>
+                    <p v-else-if="!sharedList.sharedContent || !sharedList.sharedContent.categories || !sharedList.sharedContent.categories.length">
+                        No shared items yet.
+                    </p>
                 </div>
-                <p v-else-if="!sharedList.sharedContent || !sharedList.sharedContent.categories || !sharedList.sharedContent.categories.length">
-                    No shared items yet.
+                <p v-if="!(member.sharedLists || []).length">
+                    No shared lists yet.
                 </p>
             </div>
-            <p v-if="!(member.sharedLists || []).length">
-                No shared lists yet.
-            </p>
-        </div>
             <ul>
                 <li v-for="member in trip.members" :key="member.userId || member.email">
                     <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
@@ -254,10 +252,14 @@
 import {
     acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripName, updateTripNotes,
 } from '../api/mobile-api';
+import accountDropdown from '../components/account-dropdown.vue';
 import colorPicker from '../components/colorpicker.vue';
-import modal from '../components/modal.vue';
+import listSettings from '../components/list-settings.vue';
+import mobileTabs from '../components/mobile-tabs.vue';
+import share from '../components/share.vue';
 import sidebar from '../components/sidebar.vue';
 import unitSelect from '../components/unit-select.vue';
+import { getResponsiveState, subscribeResponsiveState } from '../utils/responsive';
 
 const markdown = require('markdown').markdown;
 
@@ -268,8 +270,11 @@ const utilsMixin = require('../mixins/utils-mixin.js');
 export default {
     name: 'TripView',
     components: {
+        accountDropdown,
         colorPicker,
-        modal,
+        listSettings,
+        mobileTabs,
+        share,
         sidebar,
         unitSelect,
     },
@@ -286,14 +291,21 @@ export default {
             isEditingTripNotes: false,
             tripNotesDraft: '',
             tripNameDraft: '',
-            isRenameTripDialogShown: false,
             isRenamingTrip: false,
             groupColorsByKey: {},
+            responsive: getResponsiveState(),
+            unsubscribeResponsive: null,
         };
     },
     computed: {
         library() {
             return this.$store.state.library;
+        },
+        isSignedIn() {
+            return this.$store.state.loggedIn;
+        },
+        showCompactTabs() {
+            return this.responsive.isCompactViewport || this.responsive.isCoarsePointer;
         },
         sortedGroups() {
             return this.groupGearByUserView.slice().sort((a, b) => b.totalWeightMg - a.totalWeightMg);
@@ -386,9 +398,14 @@ export default {
     },
     mounted() {
         this.refresh();
+        this.unsubscribeResponsive = subscribeResponsiveState();
         window.addEventListener('resize', this.updateChart);
     },
     beforeDestroy() {
+        if (this.unsubscribeResponsive) {
+            this.unsubscribeResponsive();
+            this.unsubscribeResponsive = null;
+        }
         window.removeEventListener('resize', this.updateChart);
     },
     methods: {
@@ -461,6 +478,7 @@ export default {
             loadTrip(this.$route.params.tripId).then((trip) => {
                 this.trip = trip;
                 this.tripNotesDraft = trip.notes || '';
+                this.tripNameDraft = trip.name || '';
                 this.isEditingTripNotes = false;
                 this.isRenamingTrip = false;
                 this.$nextTick(this.updateChart);
@@ -535,23 +553,10 @@ export default {
                 this.isEditingTripNotes = false;
             });
         },
-        startEditingTripName() {
-            if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
-                return;
+        onTripNameInput() {
+            if (!this.canRenameTrip) {
+                this.tripNameDraft = this.trip && this.trip.name ? this.trip.name : '';
             }
-
-            this.tripNameDraft = this.trip.name || '';
-            this.isRenameTripDialogShown = true;
-            this.$nextTick(() => {
-                if (this.$refs.renameTripInput) {
-                    this.$refs.renameTripInput.focus();
-                    this.$refs.renameTripInput.select();
-                }
-            });
-        },
-        cancelEditingTripName() {
-            this.tripNameDraft = this.trip && this.trip.name ? this.trip.name : '';
-            this.isRenameTripDialogShown = false;
         },
         saveTripName() {
             if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
@@ -561,14 +566,14 @@ export default {
             const currentName = this.trip.name || '';
             const trimmedName = this.tripNameDraft.trim();
             if (!trimmedName || trimmedName === currentName) {
-                this.cancelEditingTripName();
+                this.tripNameDraft = currentName;
                 return;
             }
 
             this.isRenamingTrip = true;
             updateTripName(this.trip.id, trimmedName).then((response) => {
                 this.trip.name = response.name || trimmedName;
-                this.cancelEditingTripName();
+                this.tripNameDraft = this.trip.name;
             }).finally(() => {
                 this.isRenamingTrip = false;
             });
@@ -733,21 +738,80 @@ export default {
 </script>
 
 <style lang="scss">
+@import "../css/_globals";
+
 .lpTripView {
     padding: 20px;
 }
 
-.lpTripHeader {
-    align-items: center;
+#header {
+    align-items: baseline;
     display: flex;
-    gap: 12px;
+    gap: 4px;
+    margin: 0 -20px 20px;
+    min-height: 60px;
+    position: relative;
 }
 
-.lpTripTitleWrap {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+#hamburger {
+    cursor: pointer;
+    display: inline-block;
+    opacity: 0.6;
+    transition: transform $transitionDurationSlow;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    .lpHasSidebar & {
+        transform: rotate(90deg);
+    }
+}
+
+#lpListName {
+    font-size: 24px;
+    font-weight: 600;
+    min-width: 0;
+    padding: 12px 15px;
+
+    &:read-only {
+        cursor: default;
+    }
+}
+
+.headerItem {
+    flex: 0 0 auto;
+    min-height: 100%;
+    padding: 14px 12px;
+    position: relative;
+
+    &:first-child {
+        padding-left: 20px;
+    }
+
+    .lpPopover {
+        &:hover .lpTarget {
+            color: $blue1;
+        }
+    }
+
+    .lpTarget {
+        font-weight: 600;
+        padding: 14px 12px;
+    }
+
+    &#lpListName {
+        flex: 1 0 auto;
+    }
+
+    &.hasPopover {
+        padding: 0;
+    }
+
+    &.signInRegisterButtons {
+        height: auto;
+        padding: 0 16px;
+    }
 }
 
 .lpTripGroupPanel {
@@ -792,16 +856,6 @@ export default {
     :last-child {
         margin-bottom: 0;
     }
-}
-
-.lpTripRenameInput {
-    width: 100%;
-}
-
-.lpTripRenameActions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
 }
 
 .lpTripChartHint {
@@ -861,6 +915,39 @@ export default {
     ul {
         margin: 0;
         padding-left: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    #header {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0 -15px 15px;
+        min-height: auto;
+    }
+
+    #lpListName {
+        flex: 1 1 auto;
+        font-size: 20px;
+        min-width: min(200px, 100%);
+        padding: 12px;
+    }
+
+    .headerItem {
+        padding: 12px;
+    }
+
+    #share,
+    #settings {
+        .lpTarget {
+            min-height: 44px;
+            white-space: nowrap;
+        }
+    }
+
+    #main #sidebar {
+        display: none;
     }
 }
 </style>
