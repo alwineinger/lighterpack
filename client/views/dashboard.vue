@@ -103,7 +103,7 @@
 
 <template>
     <div v-if="isLoaded" id="main" :class="{lpHasSidebar: library.showSidebar}">
-        <sidebar />
+        <sidebar :show-gear="true" />
         <div class="lpList lpTransition">
             <mobileTabs v-if="showCompactTabs" active="list" />
             <div id="header" class="clearfix">
