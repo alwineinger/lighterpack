@@ -42,14 +42,20 @@ Use this section as the default execution playbook in either interface.
 1. **Inspect before editing**
    - Read nearby files first and preserve existing conventions.
    - Keep changes narrow; avoid broad refactors unless requested.
+2. **Plan before changing**
+   - Produce a brief plan + top risks before implementation when scope is non-trivial.
+   - Execute in small steps with per-step summary, files changed, commands run, and verification notes.
 2. **Prefer deterministic validation**
    - Run the smallest relevant lint/test command first.
    - If one command cannot run due environment limits, state the exact reason.
 3. **Minimize risk to user flows**
    - Preserve auth/session behavior, list persistence formats, and sharing routes.
    - Avoid changing API response shape unless explicitly requested.
+    - Do not remove core functionality (pack editing, totals, categories, export/import).
+    - Preserve URLs and existing user flows as much as possible.
 4. **Document behavior changes**
    - If API/config/schema behavior changes, update relevant docs under `docs/`.
+    - If you introduce new env vars, document them in `config/local.json` and here.
 5. **Commit/PR hygiene**
    - Use clear, scoped commit messages.
    - PR summaries should include what changed, why, and checks that were run.
@@ -77,6 +83,23 @@ Use this section as the default execution playbook in either interface.
 - Validate at widths around 393px (iPhone 16 Pro portrait), 852px landscape-equivalent constraints, and 375px sanity width.
 - Ensure key flows: list editing, item editing, share/export access, totals visibility.
 - Confirm inputs remain >=16px on mobile and no horizontal scroll blocking core edits.
+- Prefer touch-first controls (avoid hover-only actions) and ensure tap targets are generous.
+- Handle iOS Safari quirks: safe-area insets, dynamic viewport height (`dvh/svh`), and sticky header edge cases.
+
+## Performance + accessibility expectations
+- Avoid scroll-blocking, reduce layout thrash and excessive DOM reflows.
+- Keep focus visible, label inputs, and maintain contrast.
+- Any perf/accessibility improvements should be measurable or at least verified explicitly.
+
+## Future companion app hooks (no native app code)
+- Prefer versioned `/api/v1` JSON endpoints with stable IDs and `updatedAt` timestamps.
+- Favor sync-friendly patterns (tombstones if deletions are needed).
+- Centralize API calls in `client/api/` (or a dedicated abstraction) so the web UI dogfoods the API.
+- Document auth strategy that could work for native apps (token or session + CSRF), without implementing native code.
+
+## Step-by-step output format
+- Each implementation step should include: summary, files changed, commands run, and verification notes.
+- Final recap should include what improved, what remains, and follow-up suggestions when relevant.
 
 ## Commit / PR guidelines
 - Use incremental commits with clear scope.
