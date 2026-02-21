@@ -30,14 +30,17 @@
     font-size: 14px;
     margin: 0;
     opacity: 0.5;
+    filter: grayscale(1);
 
     &:hover {
         opacity: 1;
+        filter: none;
     }
 
     &.lpActive {
         display: inline-block;
         opacity: 1;
+        filter: none;
     }
 }
 
