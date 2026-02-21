@@ -118,9 +118,9 @@
                 :class="{lpActive: (library.defaultListId == list.id) && !isTripRoute, isMobileList: mobileLists}"
             >
                 <div class="lpHandle" title="Reorder this item" />
-                <span class="lpLibraryListSwitch lpListName" @click="setDefaultList(list)">
+                <router-link class="lpLibraryListSwitch lpListName" to="/" @click.native="setDefaultList(list)">
                     {{ list | listName }}
-                </span>
+                </router-link>
                 <a class="lpRemove" title="Remove this list" @click="removeList(list)"><i class="lpSprite lpSpriteRemove" /></a>
             </li>
         </ul>
@@ -168,9 +168,6 @@ export default {
     methods: {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
-            if (this.mobileLists || this.$route.path === '/lists' || this.$route.path.indexOf('/trips/') === 0) {
-                this.$router.push('/');
-            }
         },
         newList() {
             this.$store.commit('newList');

@@ -94,6 +94,9 @@ export default {
                 this.refreshTrips();
             }
         },
+        '$route.path': function () {
+            this.refreshTrips();
+        },
     },
     mounted() {
         this.refreshTrips();
