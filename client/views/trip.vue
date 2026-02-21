@@ -2,37 +2,33 @@
     <div v-if="trip" id="main" :class="{lpHasSidebar: library.showSidebar}">
         <sidebar :show-gear="false" />
         <div class="lpList lpTransition lpTripView">
-            <div class="lpTripHeader">
-                <a id="hamburger" class="lpTransition" @click="toggleSidebar">
-                    <i class="lpSprite lpHamburger" />
-                </a>
-                <div class="lpTripTitleWrap">
-                    <h1>{{ trip.name }}</h1>
-                    <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
-                        Rename trip
-                    </button>
-                </div>
+            <div id="header" class="clearfix">
+                <span class="headerItem">
+                    <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
+                </span>
+                <input
+                    id="lpListName"
+                    :value="trip.name"
+                    type="text"
+                    class="lpListName lpSilent headerItem"
+                    placeholder="Trip Name"
+                    autocomplete="off"
+                    name="lastpass-disable-search"
+                    maxlength="100"
+                    :readonly="!canRenameTrip"
+                    @change="updateTripNameFromHeader"
+                    @keyup.enter="$event.target.blur()"
+                >
+                <share />
+                <listSettings />
+                <accountDropdown v-if="isSignedIn" />
+                <span v-else class="headerItem signInRegisterButtons">
+                    <router-link to="/register" class="lpButton lpSmall">Register</router-link>
+                    or
+                    <router-link to="/signin" class="lpButton lpSmall">Sign In</router-link>
+                </span>
+                <span class="clearfix" />
             </div>
-
-        <modal id="renameTripDialog" :shown="isRenameTripDialogShown" @hide="cancelEditingTripName">
-            <h2>Rename trip</h2>
-            <input
-                ref="renameTripInput"
-                v-model="tripNameDraft"
-                type="text"
-                class="lpTripRenameInput"
-                maxlength="100"
-                @keyup.enter="saveTripName"
-            >
-            <div class="lpTripRenameActions">
-                <button class="lpButton lpSmall" @click="saveTripName">
-                    Save
-                </button>
-                <button class="lpButton lpSmall" @click="cancelEditingTripName">
-                    Cancel
-                </button>
-            </div>
-        </modal>
 
         <div class="lpTripNotes">
             <div class="lpTripSectionHeader">
@@ -255,7 +251,9 @@ import {
     acceptTripInvitation, inviteTripUser, loadTrip, updateTripMemberList, updateTripName, updateTripNotes,
 } from '../api/mobile-api';
 import colorPicker from '../components/colorpicker.vue';
-import modal from '../components/modal.vue';
+import share from '../components/share.vue';
+import listSettings from '../components/list-settings.vue';
+import accountDropdown from '../components/account-dropdown.vue';
 import sidebar from '../components/sidebar.vue';
 import unitSelect from '../components/unit-select.vue';
 
@@ -268,8 +266,10 @@ const utilsMixin = require('../mixins/utils-mixin.js');
 export default {
     name: 'TripView',
     components: {
+        accountDropdown,
         colorPicker,
-        modal,
+        listSettings,
+        share,
         sidebar,
         unitSelect,
     },
@@ -285,8 +285,6 @@ export default {
             },
             isEditingTripNotes: false,
             tripNotesDraft: '',
-            tripNameDraft: '',
-            isRenameTripDialogShown: false,
             isRenamingTrip: false,
             groupColorsByKey: {},
         };
@@ -294,6 +292,9 @@ export default {
     computed: {
         library() {
             return this.$store.state.library;
+        },
+        isSignedIn() {
+            return this.$store.state.loggedIn;
         },
         sortedGroups() {
             return this.groupGearByUserView.slice().sort((a, b) => b.totalWeightMg - a.totalWeightMg);
@@ -535,40 +536,22 @@ export default {
                 this.isEditingTripNotes = false;
             });
         },
-        startEditingTripName() {
-            if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
-                return;
-            }
-
-            this.tripNameDraft = this.trip.name || '';
-            this.isRenameTripDialogShown = true;
-            this.$nextTick(() => {
-                if (this.$refs.renameTripInput) {
-                    this.$refs.renameTripInput.focus();
-                    this.$refs.renameTripInput.select();
-                }
-            });
-        },
-        cancelEditingTripName() {
-            this.tripNameDraft = this.trip && this.trip.name ? this.trip.name : '';
-            this.isRenameTripDialogShown = false;
-        },
-        saveTripName() {
+        updateTripNameFromHeader(event) {
             if (!this.trip || !this.canRenameTrip || this.isRenamingTrip) {
                 return;
             }
 
             const currentName = this.trip.name || '';
-            const trimmedName = this.tripNameDraft.trim();
+            const trimmedName = event.target.value.trim();
             if (!trimmedName || trimmedName === currentName) {
-                this.cancelEditingTripName();
+                event.target.value = currentName;
                 return;
             }
 
             this.isRenamingTrip = true;
             updateTripName(this.trip.id, trimmedName).then((response) => {
                 this.trip.name = response.name || trimmedName;
-                this.cancelEditingTripName();
+                event.target.value = this.trip.name;
             }).finally(() => {
                 this.isRenamingTrip = false;
             });
@@ -733,21 +716,76 @@ export default {
 </script>
 
 <style lang="scss">
+@import "../css/_globals";
+
+#header {
+    align-items: baseline;
+    display: flex;
+    gap: 4px;
+    margin: 0 -20px 20px; /* lpList padding */
+    min-height: 60px;
+    position: relative;
+}
+
+#hamburger {
+    cursor: pointer;
+    display: inline-block;
+    opacity: 0.6;
+    transition: transform $transitionDurationSlow;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    .lpHasSidebar & {
+        transform: rotate(90deg);
+    }
+}
+
+#lpListName {
+    font-size: 24px;
+    font-weight: 600;
+    min-width: 0;
+    padding: 12px 15px;
+}
+
+.headerItem {
+    flex: 0 0 auto;
+    min-height: 100%;
+    padding: 14px 12px;
+    position: relative;
+
+    &:first-child {
+        padding-left: 20px;
+    }
+
+    .lpPopover {
+        &:hover .lpTarget {
+            color: $blue1;
+        }
+    }
+
+    .lpTarget {
+        font-weight: 600;
+        padding: 14px 12px;
+    }
+
+    &#lpListName {
+        flex: 1 0 auto;
+    }
+
+    &.hasPopover {
+        padding: 0;
+    }
+
+    &.signInRegisterButtons {
+        height: auto;
+        padding: 0 16px;
+    }
+}
+
 .lpTripView {
     padding: 20px;
-}
-
-.lpTripHeader {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-}
-
-.lpTripTitleWrap {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
 }
 
 .lpTripGroupPanel {
@@ -794,15 +832,6 @@ export default {
     }
 }
 
-.lpTripRenameInput {
-    width: 100%;
-}
-
-.lpTripRenameActions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-}
 
 .lpTripChartHint {
     color: #666;
@@ -861,6 +890,39 @@ export default {
     ul {
         margin: 0;
         padding-left: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    #header {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0 -15px 15px;
+        min-height: auto;
+    }
+
+    #lpListName {
+        flex: 1 1 auto;
+        font-size: 20px;
+        min-width: min(200px, 100%);
+        padding: 12px;
+    }
+
+    .headerItem {
+        padding: 12px;
+    }
+
+    #share,
+    #settings {
+        .lpTarget {
+            min-height: 44px;
+            white-space: nowrap;
+        }
+    }
+
+    #main #sidebar {
+        display: none;
     }
 }
 </style>
