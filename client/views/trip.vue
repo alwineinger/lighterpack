@@ -634,6 +634,34 @@ export default {
             const totals = sharedList && sharedList.sharedContent && sharedList.sharedContent.totals;
             return totals ? totals.totalItemCount : 0;
         },
+        categoryCount(sharedList) {
+            const categories = sharedList && sharedList.sharedContent && sharedList.sharedContent.categories;
+            return categories ? categories.length : 0;
+        },
+        totalItemCount(sharedList) {
+            return this.getSharedTotalItemCount(sharedList);
+        },
+        totalGroupItemCount(sharedList) {
+            const categories = sharedList && sharedList.sharedContent && sharedList.sharedContent.categories;
+            if (!categories || !categories.length) {
+                return 0;
+            }
+            let count = 0;
+            categories.forEach((category) => {
+                if (!category.items || !category.items.length) {
+                    return;
+                }
+                category.items.forEach((item) => {
+                    if (item.group) {
+                        count += 1;
+                    }
+                });
+            });
+            return count;
+        },
+        totalWeight(sharedList) {
+            return this.getSharedTotalWeight(sharedList);
+        },
         isFullSharedContent(sharedList) {
             return !!(sharedList && sharedList.sharedContent && sharedList.sharedContent.mode === 'full' && sharedList.sharedContent.categories && sharedList.sharedContent.categories.length);
         },
