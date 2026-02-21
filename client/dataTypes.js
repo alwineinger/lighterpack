@@ -470,6 +470,10 @@ Library.prototype.renderChart = function (type) {
     return this.getListById(this.defaultListId).renderChart(type);
 };
 
+Library.prototype.calculateAllListTotals = function () {
+    this.lists.forEach((list) => list.calculateTotals());
+};
+
 Library.prototype.getCategoryById = function (id) {
     return this.idMap[id];
 };
@@ -495,6 +499,93 @@ Library.prototype.getItemsInCurrentList = function () {
         }
     }
     return out;
+};
+
+Library.prototype.getItemDedupKey = function (item) {
+    const dedupData = {
+        name: item.name || '',
+        description: item.description || '',
+        weight: item.weight || 0,
+        authorUnit: item.authorUnit || 'oz',
+        price: item.price || 0,
+        image: item.image || '',
+        imageUrl: item.imageUrl || '',
+        url: item.url || '',
+    };
+    return JSON.stringify(dedupData);
+};
+
+Library.prototype.findDuplicateItemGroups = function () {
+    const itemsByKey = {};
+
+    this.items.forEach((item) => {
+        const key = this.getItemDedupKey(item);
+        if (!itemsByKey[key]) {
+            itemsByKey[key] = [];
+        }
+        itemsByKey[key].push(item);
+    });
+
+    const duplicateGroups = [];
+    for (const key in itemsByKey) {
+        if (itemsByKey[key].length > 1) {
+            duplicateGroups.push(itemsByKey[key]);
+        }
+    }
+    return duplicateGroups;
+};
+
+Library.prototype.mergeCategoryItemTags = function (targetCategoryItem, sourceCategoryItem) {
+    targetCategoryItem.qty += sourceCategoryItem.qty;
+    targetCategoryItem.worn = targetCategoryItem.worn || sourceCategoryItem.worn;
+    targetCategoryItem.consumable = targetCategoryItem.consumable || sourceCategoryItem.consumable;
+    targetCategoryItem.group = targetCategoryItem.group || sourceCategoryItem.group;
+    targetCategoryItem.star = Math.max(targetCategoryItem.star || 0, sourceCategoryItem.star || 0);
+};
+
+Library.prototype.replaceItemReference = function (category, oldItemId, newItemId) {
+    const sourceCategoryItem = category.getCategoryItemById(oldItemId);
+    const targetCategoryItem = category.getCategoryItemById(newItemId);
+
+    if (!sourceCategoryItem) {
+        return false;
+    }
+
+    if (targetCategoryItem) {
+        this.mergeCategoryItemTags(targetCategoryItem, sourceCategoryItem);
+        category.removeItem(oldItemId);
+    } else {
+        sourceCategoryItem.itemId = newItemId;
+    }
+
+    return true;
+};
+
+Library.prototype.dedupeDuplicateItems = function () {
+    const duplicateGroups = this.findDuplicateItemGroups();
+    const summary = {
+        duplicateGroupsFound: duplicateGroups.length,
+        duplicateItemsFound: 0,
+        itemsDeleted: 0,
+        replacements: 0,
+    };
+
+    duplicateGroups.forEach((group) => {
+        const keptItem = group[0];
+        summary.duplicateItemsFound += group.length;
+
+        group.slice(1).forEach((duplicateItem) => {
+            this.categories.forEach((category) => {
+                if (this.replaceItemReference(category, duplicateItem.id, keptItem.id)) {
+                    summary.replacements += 1;
+                }
+            });
+            this.removeItem(duplicateItem.id);
+            summary.itemsDeleted += 1;
+        });
+    });
+
+    return summary;
 };
 
 Library.prototype.findCategoryWithItemById = function (itemId, listId) {

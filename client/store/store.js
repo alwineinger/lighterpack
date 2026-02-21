@@ -238,8 +238,13 @@ const store = new Vuex.Store({
                 item.authorUnit = row.unit;
                 category.name = row.category;
             }
-            list.calculateTotals();
+            const dedupeSummary = state.library.dedupeDuplicateItems();
+            state.library.calculateAllListTotals();
             state.library.defaultListId = list.id;
+
+            if (dedupeSummary.itemsDeleted > 0) {
+                state.globalAlerts.push({ message: `Imported list and merged ${dedupeSummary.itemsDeleted} duplicate gear item${dedupeSummary.itemsDeleted === 1 ? '' : 's'}.` });
+            }
         },
         save() {
             // no-op

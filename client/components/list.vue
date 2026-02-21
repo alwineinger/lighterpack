@@ -20,6 +20,11 @@
     }
 }
 
+.findDuplicateItems {
+    display: inline-block;
+    margin: 15px 0 0;
+}
+
 #getStarted {
     background: darken($background1, 10%);
     display: flex;
@@ -65,7 +70,6 @@
         </div>
         <list-summary v-if="!isListNew" class="lpListSummaryMain" :list="list" />
 
-
         <div style="clear: both;" />
 
         <div v-if="library.optionalFields['listDescription']" id="listDescriptionContainer">
@@ -80,6 +84,7 @@
         <hr>
 
         <a class="lpAdd addCategory" @click="newCategory"><i class="lpSprite lpSpriteAdd" />Add new category</a>
+        <a class="lpButton findDuplicateItems" @click="findDuplicateItems">Find duplicate gear items</a>
     </div>
 </template>
 
@@ -112,7 +117,7 @@ export default {
             return this.$store.getters.activeList;
         },
         categories() {
-            return this.list.categoryIds.map(id => this.library.getCategoryById(id));
+            return this.list.categoryIds.map((id) => this.library.getCategoryById(id));
         },
         isListNew() {
             return this.list.totalWeight === 0;
@@ -138,6 +143,35 @@ export default {
         },
         updateListDescription() {
             this.$store.commit('updateListDescription', this.list);
+        },
+        findDuplicateItems() {
+            const duplicateGroups = this.library.findDuplicateItemGroups();
+
+            if (!duplicateGroups.length) {
+                this.$store.state.globalAlerts.push({ message: 'No duplicate gear items found.' });
+                return;
+            }
+
+            const duplicateItemCount = duplicateGroups.reduce((total, group) => total + group.length, 0);
+            const removableItemCount = duplicateGroups.reduce((total, group) => total + (group.length - 1), 0);
+
+            const speedbumpOptions = {
+                title: 'Find duplicate gear items',
+                body: `Found ${duplicateGroups.length} duplicate group${duplicateGroups.length === 1 ? '' : 's'} (${duplicateItemCount} matching items). LighterPack will keep the first item in each group, replace duplicate item references in all lists, preserve list-specific tags and quantities, and delete ${removableItemCount} duplicate item${removableItemCount === 1 ? '' : 's'}. Continue?`,
+                confirm: 'Replace and delete duplicates',
+                cancel: 'Cancel',
+            };
+
+            bus.$emit('initSpeedbump', (confirmed) => {
+                if (!confirmed) {
+                    return;
+                }
+                const summary = this.library.dedupeDuplicateItems();
+                this.library.calculateAllListTotals();
+                this.$store.state.globalAlerts.push({
+                    message: `Finished duplicate cleanup: removed ${summary.itemsDeleted} item${summary.itemsDeleted === 1 ? '' : 's'} and updated ${summary.replacements} list entr${summary.replacements === 1 ? 'y' : 'ies'}.`,
+                });
+            }, speedbumpOptions);
         },
         handleItemReorder() {
             if (this.itemDrake) {
