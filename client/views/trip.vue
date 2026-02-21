@@ -7,9 +7,6 @@
                 <span v-if="!showCompactTabs" class="lpTripHeaderItem">
                     <a id="hamburger" class="lpTransition" @click="toggleSidebar"><i class="lpSprite lpHamburger" /></a>
                 </span>
-                <router-link class="lpHref lpTripHeaderItem" to="/">
-                    Back to list
-                </router-link>
                 <div class="lpTripTitleWrap lpTripHeaderItem">
                     <h1>{{ trip.name }}</h1>
                     <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
@@ -365,6 +362,9 @@ export default {
             deep: true,
         },
         '$store.state.syncToken': function () {
+            this.refresh();
+        },
+        '$route.params.tripId': function () {
             this.refresh();
         },
     },

@@ -115,7 +115,7 @@
                 v-for="list in library.lists"
                 :key="list.id"
                 class="lpLibraryList"
-                :class="{lpActive: (library.defaultListId == list.id), isMobileList: mobileLists}"
+                :class="{lpActive: (library.defaultListId == list.id) && !isTripRoute, isMobileList: mobileLists}"
             >
                 <div class="lpHandle" title="Reorder this item" />
                 <span class="lpLibraryListSwitch lpListName" @click="setDefaultList(list)">
@@ -156,6 +156,9 @@ export default {
         library() {
             return this.$store.state.library;
         },
+        isTripRoute() {
+            return this.$route.path.indexOf('/trips/') === 0;
+        },
     },
     mounted() {
         if (!this.mobileLists) {
@@ -165,7 +168,7 @@ export default {
     methods: {
         setDefaultList(list) {
             this.$store.commit('setDefaultList', list);
-            if (this.mobileLists || this.$route.path === '/lists') {
+            if (this.mobileLists || this.$route.path === '/lists' || this.$route.path.indexOf('/trips/') === 0) {
                 this.$router.push('/');
             }
         },
