@@ -1,5 +1,6 @@
 const apiRequest = (url, options) => fetchJson(url, {
     credentials: 'same-origin',
+    cache: 'no-store',
     headers: {
         'Content-Type': 'application/json',
     },

@@ -79,7 +79,7 @@ $sidebarPadding: 20px;
 
             <libraryLists />
             <libraryTrips />
-            <libraryItems />
+            <libraryItems v-if="showGear" />
         </div>
     </div>
 </template>
@@ -91,6 +91,12 @@ import libraryTrips from './library-trips.vue';
 
 export default {
     name: 'Sidebar',
+    props: {
+        showGear: {
+            type: Boolean,
+            default: true,
+        },
+    },
     components: {
         libraryItems,
         libraryLists,

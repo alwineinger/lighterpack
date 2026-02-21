@@ -1,16 +1,18 @@
 <template>
-    <div v-if="trip" class="lpTripView">
-        <div class="lpTripHeader">
-            <router-link class="lpHref" to="/">
-                Back to list
-            </router-link>
-            <div class="lpTripTitleWrap">
-                <h1>{{ trip.name }}</h1>
-                <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
-                    Rename trip
-                </button>
+    <div v-if="trip" id="main" :class="{lpHasSidebar: library.showSidebar}">
+        <sidebar :show-gear="false" />
+        <div class="lpList lpTransition lpTripView">
+            <div class="lpTripHeader">
+                <a id="hamburger" class="lpTransition" @click="toggleSidebar">
+                    <i class="lpSprite lpHamburger" />
+                </a>
+                <div class="lpTripTitleWrap">
+                    <h1>{{ trip.name }}</h1>
+                    <button v-if="canRenameTrip" class="lpButton lpSmall" @click="startEditingTripName">
+                        Rename trip
+                    </button>
+                </div>
             </div>
-        </div>
 
         <modal id="renameTripDialog" :shown="isRenameTripDialogShown" @hide="cancelEditingTripName">
             <h2>Rename trip</h2>
@@ -238,12 +240,13 @@
                 No shared lists yet.
             </p>
         </div>
-        <ul>
-            <li v-for="member in trip.members" :key="member.userId || member.email">
-                <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
-                <span v-for="sharedList in member.sharedLists || []" :key="(member.userId || member.email) + '-list-' + sharedList.listId"> • {{ sharedList.listName }} ({{ sharedList.visibility }})</span>
-            </li>
-        </ul>
+            <ul>
+                <li v-for="member in trip.members" :key="member.userId || member.email">
+                    <strong>{{ member.username || member.email }}</strong> — {{ member.role }}
+                    <span v-for="sharedList in member.sharedLists || []" :key="(member.userId || member.email) + '-list-' + sharedList.listId"> • {{ sharedList.listName }} ({{ sharedList.visibility }})</span>
+                </li>
+            </ul>
+        </div>
     </div>
 </template>
 
@@ -253,6 +256,7 @@ import {
 } from '../api/mobile-api';
 import colorPicker from '../components/colorpicker.vue';
 import modal from '../components/modal.vue';
+import sidebar from '../components/sidebar.vue';
 import unitSelect from '../components/unit-select.vue';
 
 const markdown = require('markdown').markdown;
@@ -266,6 +270,7 @@ export default {
     components: {
         colorPicker,
         modal,
+        sidebar,
         unitSelect,
     },
     mixins: [utilsMixin],
@@ -366,6 +371,9 @@ export default {
         },
     },
     watch: {
+        '$route.params.tripId': function () {
+            this.refresh();
+        },
         sortedGroups: {
             handler() {
                 this.$nextTick(this.updateChart);
@@ -384,6 +392,9 @@ export default {
         window.removeEventListener('resize', this.updateChart);
     },
     methods: {
+        toggleSidebar() {
+            this.$store.commit('toggleSidebar');
+        },
         buildCurrentUserLocalGroups() {
             if (!this.trip || !this.trip.currentUserMember || !this.trip.currentUserMember.userId) {
                 return [];

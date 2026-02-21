@@ -34,6 +34,8 @@ const vueRoutes = [ /* TODO - get this from same data source as Vue */
     { path: '/forgot-password' },
     { path: '/lists' },
     { path: '/gear' },
+    { path: '/trips' },
+    { path: '/trips/:tripId' },
     { path: '/moderation' },
 ];
 
