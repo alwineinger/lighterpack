@@ -21,6 +21,13 @@
         border-top: none;
         padding-top: 10px;
     }
+
+    &.lpActive {
+        .lpTripLink {
+            color: $yellow1;
+            font-weight: bold;
+        }
+    }
 }
 
 .lpTripLink {
@@ -50,7 +57,12 @@
             <a class="lpAdd" @click="newTrip"><i class="lpSprite lpSpriteAdd" />Add new trip</a>
         </div>
         <ul>
-            <li v-for="trip in trips" :key="trip.id" class="lpTripList">
+            <li
+                v-for="trip in trips"
+                :key="trip.id"
+                class="lpTripList"
+                :class="{lpActive: isActiveTrip(trip)}"
+            >
                 <span class="lpTripLink" @click="openTrip(trip)">{{ trip.name }}</span>
                 <span class="lpTripRole">{{ trip.role }}</span>
             </li>
@@ -78,6 +90,9 @@ export default {
         this.refreshTrips();
     },
     methods: {
+        isActiveTrip(trip) {
+            return this.$route.path === `/trips/${trip.id}`;
+        },
         refreshTrips() {
             loadTrips()
                 .then((trips) => {
