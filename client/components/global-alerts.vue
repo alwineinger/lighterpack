@@ -22,17 +22,31 @@
     list-style-type: none;
     margin: 0;
     padding: $spacingMedium;
+    position: relative;
 
     &:last-child {
         border-bottom: none;
     }
 }
+
+.lpGlobalAlertClose {
+    background: none;
+    border: none;
+    color: $darkYellow;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    position: absolute;
+    right: 10px;
+    top: 8px;
+}
 </style>
 
 <template>
     <ul v-if="alerts && alerts.length" class="lpGlobalAlerts">
-        <li v-for="alert in alerts" class="lpGlobalAlert">
+        <li v-for="(alert, index) in alerts" class="lpGlobalAlert">
             {{ alert.message }}
+            <button class="lpGlobalAlertClose" type="button" @click="dismiss(index)">×</button>
         </li>
     </ul>
 </template>
@@ -44,6 +58,11 @@ export default {
     computed: {
         alerts() {
             return this.$store.state.globalAlerts;
+        },
+    },
+    methods: {
+        dismiss(index) {
+            this.$store.state.globalAlerts.splice(index, 1);
         },
     },
 };

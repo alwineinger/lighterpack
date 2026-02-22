@@ -84,7 +84,6 @@
         <hr>
 
         <a class="lpAdd addCategory" @click="newCategory"><i class="lpSprite lpSpriteAdd" />Add new category</a>
-        <a class="lpButton findDuplicateItems" @click="findDuplicateItems">Find duplicate gear items</a>
     </div>
 </template>
 
@@ -136,6 +135,10 @@ export default {
     mounted() {
         this.handleCategoryReorder();
         this.handleItemReorder();
+        bus.$on('findDuplicateItems', this.findDuplicateItems);
+    },
+    beforeDestroy() {
+        bus.$off('findDuplicateItems', this.findDuplicateItems);
     },
     methods: {
         newCategory() {

@@ -10,6 +10,10 @@
     position: relative;
 }
 
+#lpFooterActions {
+    margin: 12px 0;
+}
+
 #hamburger {
     cursor: pointer;
     display: inline-block;
@@ -125,6 +129,9 @@
             <list />
 
             <div id="lpFooter">
+                <div id="lpFooterActions">
+                    <a class="lpButton lpSmall" @click="findDuplicateItems">Find duplicate gear items</a>
+                </div>
                 <div class="lpSiteBy">
                     Site by <a class="lpHref" href="https://www.galenmaly.com/" target="_blank" rel="noopener noreferrer">Galen Maly</a>
                     and <a class="lpHref" href="https://github.com/galenmaly/lighterpack/graphs/contributors" target="_blank" rel="noopener noreferrer">friends</a>.
@@ -233,6 +240,9 @@ export default {
     methods: {
         toggleSidebar() {
             this.$store.commit('toggleSidebar');
+        },
+        findDuplicateItems() {
+            bus.$emit('findDuplicateItems');
         },
         updateListName(evt) {
             this.$store.commit('updateListName', { id: this.list.id, name: evt.target.value });

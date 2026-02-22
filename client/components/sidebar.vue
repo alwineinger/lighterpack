@@ -79,7 +79,7 @@ $sidebarPadding: 20px;
 
             <libraryLists />
             <libraryTrips />
-            <libraryItems v-if="showGear" />
+            <libraryItems v-if="showGear" :hide-current-list-items="isListRoute" />
         </div>
     </div>
 </template>
@@ -95,6 +95,11 @@ export default {
         showGear: {
             type: Boolean,
             default: true,
+        },
+    },
+    computed: {
+        isListRoute() {
+            return this.$route.path === '/';
         },
     },
     components: {

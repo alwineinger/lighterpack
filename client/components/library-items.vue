@@ -29,6 +29,12 @@
     margin-bottom: 12px;
 }
 
+.lpLibraryToggle {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+}
+
 #librarySearch {
     background: #666;
     border: 1px solid #888;
@@ -77,9 +83,9 @@
     column-gap: 8px;
     display: grid;
     grid-template-areas:
-        "select name weight actions"
-        "select description description actions";
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+        "select handle name weight actions"
+        "select handle description description actions";
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
     list-style: none;
     margin: 0 10px 5px;
     min-height: 54px;
@@ -134,14 +140,16 @@
         justify-self: end;
     }
 
-    .lpHandle,
     .lpRemove,
     .lpAdd {
         position: static;
     }
 
-    .lpHandle {
+    .lpLibraryItemHandle {
         align-self: stretch;
+        cursor: grab;
+        display: inline-block;
+        grid-area: handle;
         height: auto;
     }
 
@@ -247,6 +255,10 @@
         <h2>Gear</h2>
         <div id="libraryToolbar">
             <input id="librarySearch" v-model="searchText" type="text" placeholder="search items">
+            <label v-if="hideCurrentListItems" class="lpLibraryToggle">
+                <input v-model="hideAddedItems" type="checkbox">
+                Hide added items
+            </label>
             <div v-if="supportsMultiSelect" class="lpBulkAddBar">
                 <label class="lpBulkToggle">
                     <input v-model="bulkSelectEnabled" type="checkbox">
@@ -291,6 +303,7 @@
                         :disabled="item.inCurrentList"
                     >
                 </label>
+                <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Drag to add to list" />
                 <a v-if="item.url" :href="item.url" target="_blank" class="lpName lpHref">{{ item.name }}</a>
                 <span v-if="!item.url" class="lpName">{{ item.name }}</span>
                 <span class="lpWeight">
@@ -308,7 +321,6 @@
                         @click="addItemToCategory(item.id)"
                     ><i class="lpSprite lpSpriteAdd" /></a>
                     <a class="lpRemove lpRemoveLibraryItem speedbump" title="Delete this item permanently" @click="removeItem(item)"><i class="lpTrashCanIcon" /></a>
-                    <div v-if="!mobileGear && !item.inCurrentList" class="lpHandle lpLibraryItemHandle" title="Reorder this item" />
                 </div>
             </li>
         </ul>
@@ -329,6 +341,10 @@ export default {
             type: Boolean,
             default: false,
         },
+        hideCurrentListItems: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
@@ -340,6 +356,7 @@ export default {
             bulkCategoryId: null,
             responsive: getResponsiveState(),
             unsubscribeResponsive: null,
+            hideAddedItems: true,
         };
     },
     computed: {
@@ -372,7 +389,7 @@ export default {
                 }
             }
 
-            if (this.mobileGear) {
+            if (this.mobileGear || (this.hideCurrentListItems && this.hideAddedItems)) {
                 return filteredItems.filter((listItem) => !listItem.inCurrentList);
             }
 
