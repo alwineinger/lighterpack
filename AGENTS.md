@@ -56,6 +56,8 @@ Use this section as the default execution playbook in either interface.
 4. **Document behavior changes**
    - If API/config/schema behavior changes, update relevant docs under `docs/`.
     - If you introduce new env vars, document them in `config/local.json` and here.
+   - When resolving a reported bug, update `AGENTS.md` with any durable guardrails needed to prevent the same bug pattern from reoccurring.
+   - For reported bugs, review the broader codebase for similar root causes and proactively fix related issues in-scope when safe to do so.
 5. **Commit/PR hygiene**
    - Use clear, scoped commit messages.
    - PR summaries should include what changed, why, and checks that were run.
